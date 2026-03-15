@@ -98,13 +98,12 @@ class MainScreen(Screen[None]):
                 ),
                 Horizontal(
                     Button("Download", id="download_button", variant="primary"),
-                    Button("Cancel", id="cancel_download_button"),
+                    Button("Cancel", id="cancel_download_button", variant="warning"),
                     Button("Clear", id="clear_input_button"),
                     id="primary_row",
                 ),
                 classes="main-toolbar",
             ),
-            Static("Log:", id="log_label"),
             Log(id="log_widget", auto_scroll=True),
             id="main_panel",
         )
@@ -277,8 +276,8 @@ class MainScreen(Screen[None]):
     def _update_action_visibility(self) -> None:
         self.query_one("#download_button", Button).display = not self.download_in_progress
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
+        self.query_one("#clear_input_button", Button).disabled = self.download_in_progress
         has_log = self.download_in_progress or bool(self.log_lines)
-        self.query_one("#log_label", Static).display = has_log
         self.query_one("#log_widget", Log).display = has_log
 
     def on_input_changed(self, event: Input.Changed) -> None:
