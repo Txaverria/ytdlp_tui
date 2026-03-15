@@ -31,52 +31,81 @@ class MainScreen(Screen[None]):
             Static("Download", classes="title"),
             Static("Paste a URL or search term to begin.", classes="subtitle"),
             Vertical(
-                Static("Source", classes="section-title"),
-                Input(placeholder="URL or search term", id="download_input"),
-                Select(
-                    [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
-                    value="video",
-                    id="mode_select",
-                    prompt="Mode",
-                ),
                 Horizontal(
-                    Button("Download", id="download_button", variant="primary"),
-                    Button("Cancel", id="cancel_download_button"),
-                    Button("Retry Latest", id="retry_download_button"),
-                    Button("Open Folder", id="open_folder_button"),
-                    Button("Settings", id="settings_button"),
-                    classes="actions",
+                    Input(placeholder="URL or search term", id="download_input"),
+                    Select(
+                        [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
+                        value="video",
+                        id="mode_select",
+                        prompt="Mode",
+                    ),
+                    id="source_row",
                 ),
-                Static(
-                    f"Downloads will go to: {app.config.download_dir}",
-                    id="download_dir_text",
-                    classes="note",
+                Vertical(
+                    Horizontal(
+                        Button("Download", id="download_button", variant="primary"),
+                        Button("Cancel", id="cancel_download_button"),
+                        Button("Retry Latest", id="retry_download_button"),
+                        Button("Open Folder", id="open_folder_button"),
+                        Button("Settings", id="settings_button"),
+                        classes="actions action-row",
+                        id="main_actions_wide",
+                    ),
+                    Horizontal(
+                        Button("Download", id="download_button_compact", variant="primary"),
+                        Button("Cancel", id="cancel_download_button_compact"),
+                        Button("Retry Latest", id="retry_download_button_compact"),
+                        classes="actions action-row",
+                        id="main_actions_compact_primary",
+                    ),
+                    Horizontal(
+                        Button("Open Folder", id="open_folder_button_compact"),
+                        Button("Settings", id="settings_button_compact"),
+                        classes="actions action-row",
+                        id="main_actions_compact_secondary",
+                    ),
+                    id="main_actions_block",
                 ),
-                classes="section-block",
+                classes="main-toolbar",
             ),
-            Vertical(
-                Static("Status", classes="section-title"),
-                Static(
-                    "Ready for a download request.",
-                    id="status_text",
-                    classes="status-note status-box",
+            Horizontal(
+                Vertical(
+                    Vertical(
+                        Static("Status", classes="section-title"),
+                        Static(
+                            "Ready for a download request.",
+                            id="status_text",
+                            classes="status-note status-box",
+                        ),
+                        Static(
+                            f"Downloads will go to: {app.config.download_dir}",
+                            id="download_dir_text",
+                            classes="note tight-note",
+                        ),
+                        Static("", id="dependency_text", classes="note"),
+                        classes="section-block",
+                    ),
+                    Vertical(
+                        Static("Recent Result", classes="section-title"),
+                        Horizontal(
+                            Button("Open Latest File", id="open_latest_file_button"),
+                            Button("Open Latest File Folder", id="open_latest_file_folder_button"),
+                            classes="actions",
+                            id="recent_actions",
+                        ),
+                        Static("", id="recent_files_text", classes="note status-box"),
+                        classes="section-block",
+                    ),
+                    classes="panel-surface",
+                    id="main_left",
                 ),
-                Static("", id="dependency_text", classes="note"),
-                classes="section-block",
-            ),
-            Vertical(
-                Static("Recent Result", classes="section-title"),
-                Horizontal(
-                    Button("Open Latest File", id="open_latest_file_button"),
-                    Button("Open Latest File Folder", id="open_latest_file_folder_button"),
-                    classes="actions",
+                Vertical(
+                    Static("Activity", classes="section-title"),
+                    Static("", id="log_text", classes="note status-box"),
+                    classes="panel-surface",
+                    id="main_right",
                 ),
-                Static("", id="recent_files_text", classes="note status-box"),
-                classes="section-block",
-            ),
-            Vertical(
-                Static("Activity", classes="section-title"),
-                Static("", id="log_text", classes="note status-box"),
+                id="main_columns",
             ),
             id="main_panel",
         )
@@ -84,6 +113,10 @@ class MainScreen(Screen[None]):
 
     def on_mount(self) -> None:
         self._refresh_status()
+        self._update_layout_mode()
+
+    def on_resize(self) -> None:
+        self._update_layout_mode()
 
     def action_settings(self) -> None:
         from ytdlp_tui.ui.settings_screen import SettingsScreen
@@ -94,19 +127,19 @@ class MainScreen(Screen[None]):
         self.app.exit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "settings_button":
+        if event.button.id in {"settings_button", "settings_button_compact"}:
             self.action_settings()
-        elif event.button.id == "open_folder_button":
+        elif event.button.id in {"open_folder_button", "open_folder_button_compact"}:
             self._open_download_dir()
         elif event.button.id == "open_latest_file_button":
             self._open_latest_file()
         elif event.button.id == "open_latest_file_folder_button":
             self._open_latest_file_folder()
-        elif event.button.id == "download_button":
+        elif event.button.id in {"download_button", "download_button_compact"}:
             self._prepare_download()
-        elif event.button.id == "cancel_download_button":
+        elif event.button.id in {"cancel_download_button", "cancel_download_button_compact"}:
             self._cancel_download()
-        elif event.button.id == "retry_download_button":
+        elif event.button.id in {"retry_download_button", "retry_download_button_compact"}:
             self._retry_latest_download()
 
     def _open_download_dir(self) -> None:
@@ -264,3 +297,8 @@ class MainScreen(Screen[None]):
         self.query_one("#status_text", Static).update("Retrying latest download...")
         self.query_one("#log_text", Static).update("")
         self._run_download(self.last_request)
+
+    def _update_layout_mode(self) -> None:
+        width = self.app.size.width
+        compact = width < 136
+        self.set_class(compact, "compact-layout")

@@ -45,7 +45,6 @@ class YtDlpTuiApp(App[None]):
 
     #main_panel, #settings_panel {
         width: 1fr;
-        max-width: 108;
         height: 1fr;
         margin: 0 1;
         padding: 0 1;
@@ -92,6 +91,115 @@ class YtDlpTuiApp(App[None]):
 
     .status-note {
         color: #f3efe6;
+    }
+
+    .main-toolbar {
+        height: auto;
+        margin: 0 0 0 0;
+    }
+
+    #source_row {
+        layout: horizontal;
+        height: auto;
+        margin: 0 0 1 0;
+    }
+
+    #source_row Input {
+        width: 70%;
+        margin-right: 1;
+    }
+
+    #source_row Select {
+        width: 30%;
+    }
+
+    #main_columns {
+        layout: horizontal;
+        height: 1fr;
+    }
+
+    #main_left {
+        width: 45%;
+        min-width: 36;
+        height: 1fr;
+        margin-right: 1;
+    }
+
+    #main_right {
+        width: 55%;
+        height: 1fr;
+    }
+
+    .panel-surface {
+        height: 1fr;
+        padding: 0 1;
+        border: round #35506b;
+        background: #0d1721;
+    }
+
+    .tight-note {
+        margin: 0 0 0 0;
+    }
+
+    #main_actions_block {
+        height: auto;
+    }
+
+    .action-row {
+        height: auto;
+        margin: 0 0 1 0;
+    }
+
+    #main_actions_wide,
+    #main_actions_compact_primary,
+    #main_actions_compact_secondary {
+        height: auto;
+    }
+
+    #main_actions_compact_primary,
+    #main_actions_compact_secondary {
+        display: none;
+    }
+
+    .compact-layout #source_row {
+        layout: vertical;
+    }
+
+    .compact-layout #source_row Input,
+    .compact-layout #source_row Select {
+        width: 1fr;
+        margin-right: 0;
+    }
+
+    .compact-layout #main_actions_wide {
+        display: none;
+    }
+
+    .compact-layout #main_actions_compact_primary,
+    .compact-layout #main_actions_compact_secondary {
+        display: block;
+    }
+
+    .compact-layout #main_actions_compact_primary {
+        margin: 0 0 1 0;
+    }
+
+    .compact-layout #main_columns {
+        layout: vertical;
+        height: auto;
+    }
+
+    .compact-layout #main_left,
+    .compact-layout #main_right {
+        width: 1fr;
+        height: auto;
+        min-width: 0;
+        margin-right: 0;
+        margin-bottom: 1;
+    }
+
+    .compact-layout .panel-surface {
+        height: auto;
     }
     """
 
