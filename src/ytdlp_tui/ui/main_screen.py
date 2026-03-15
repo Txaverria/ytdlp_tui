@@ -1,4 +1,5 @@
 import threading
+import re
 from typing import TYPE_CHECKING
 
 from rich.text import Text
@@ -6,7 +7,7 @@ from textual.color import Color
 from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Log, Select, Static
+from textual.widgets import Button, Footer, Header, Input, LoadingIndicator, Log, ProgressBar, Select, Static
 
 from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
@@ -19,11 +20,19 @@ if TYPE_CHECKING:
 
 class MainScreen(Screen[None]):
     BINDINGS = [("s", "settings", "Settings"), ("ctrl+q", "quit_app", "Quit")]
+    PROGRESS_RE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
+    PHASE_MESSAGES = {
+        "[FixupM4a]": "Fixing audio container...",
+        "[ExtractAudio]": "Converting audio...",
+        "[Merger]": "Merging streams...",
+        "[VideoRemuxer]": "Remuxing file...",
+    }
     recent_files: list[str] = []
     log_lines: list[str] = []
     last_request: DownloadRequest | None = None
     cancel_event: threading.Event | None = None
     download_in_progress: bool = False
+    postprocess_active: bool = False
 
     def _hero_colors(self) -> tuple[str, str]:
         theme = self.app.current_theme
@@ -73,18 +82,26 @@ class MainScreen(Screen[None]):
             Static(self._build_hero(False), classes="hero", id="hero_text"),
             Static("", id="status_meta"),
             Static("", classes="spacer"),
-            Static("Ready.", id="status_text"),
+            Horizontal(
+                ProgressBar(total=100, show_eta=False, show_percentage=False, id="download_progress"),
+                Horizontal(
+                    Static("Ready.", id="status_text"),
+                    LoadingIndicator(id="status_loading"),
+                    id="status_message_group",
+                ),
+                id="status_row",
+            ),
             Static("", classes="spacer"),
             Vertical(
                 Horizontal(
                     Select(
-                        [("MP3", "mp3"), ("OGG", "ogg"), ("MP4", "mp4"), ("WebM", "webm")],
+                        [("MP3", "mp3"), ("M4A", "m4a"), ("OGG", "ogg"), ("MP4", "mp4"), ("WebM", "webm")],
                         value="mp4",
                         id="format_select",
                         prompt="Format",
                     ),
                     Select(
-                        [("High", "high"), ("Low", "low")],
+                        [("High", "high"), ("Medium", "medium"), ("Low", "low")],
                         value="high",
                         id="quality_select",
                         prompt="Quality",
@@ -100,6 +117,7 @@ class MainScreen(Screen[None]):
                     Button("Download", id="download_button", variant="primary"),
                     Button("Cancel", id="cancel_download_button", variant="warning"),
                     Button("Clear", id="clear_input_button"),
+                    Button("Copy Log", id="copy_log_button"),
                     id="primary_row",
                 ),
                 classes="main-toolbar",
@@ -133,6 +151,8 @@ class MainScreen(Screen[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "clear_input_button":
             self._clear_input()
+        elif event.button.id == "copy_log_button":
+            self._copy_log()
         elif event.button.id == "settings_button":
             self.action_settings()
         elif event.button.id == "download_button":
@@ -143,8 +163,17 @@ class MainScreen(Screen[None]):
     def _clear_input(self) -> None:
         self.query_one("#input_group", UrlInput).clear()
         self.log_lines = []
+        self.postprocess_active = False
         self.query_one("#log_widget", Log).clear()
+        self.query_one("#download_progress", ProgressBar).update(progress=0)
         self._update_action_visibility()
+
+    def _copy_log(self) -> None:
+        if not self.log_lines:
+            self.notify("There is no log output to copy.", severity="warning")
+            return
+        self.app.copy_to_clipboard("\n".join(self.log_lines))
+        self.notify("Log copied to clipboard.")
 
     def on_screen_resume(self) -> None:
         app = self.app
@@ -192,9 +221,11 @@ class MainScreen(Screen[None]):
         self.last_request = request
         self.cancel_event = threading.Event()
         self.download_in_progress = True
+        self.postprocess_active = False
         self.log_lines = []
         status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
         self.query_one("#log_widget", Log).clear()
+        self.query_one("#download_progress", ProgressBar).update(total=100, progress=0)
         self._update_action_visibility()
         self._run_download(request)
 
@@ -231,7 +262,19 @@ class MainScreen(Screen[None]):
 
         status_widget = self.query_one("#status_text", Static)
         if line.startswith("[download]"):
+            self.postprocess_active = False
             status_widget.update(line)
+            progress = self._extract_progress(line)
+            if progress is not None:
+                self.query_one("#download_progress", ProgressBar).update(progress=progress)
+        else:
+            phase_message = self._phase_status_message(line)
+            if phase_message:
+                self.postprocess_active = True
+                status_widget.update(phase_message)
+                self.query_one("#download_progress", ProgressBar).update(progress=100)
+
+        self._update_action_visibility()
 
         log_widget = self.query_one("#log_widget", Log)
         log_widget.clear()
@@ -242,6 +285,7 @@ class MainScreen(Screen[None]):
         status_widget = self.query_one("#status_text", Static)
         log_widget = self.query_one("#log_widget", Log)
         self.download_in_progress = False
+        self.postprocess_active = False
         self.cancel_event = None
         self.recent_files = result.downloaded_files
         self._update_action_visibility()
@@ -255,6 +299,9 @@ class MainScreen(Screen[None]):
         else:
             status_widget.update(result.summary or result.error or "Download failed.")
             self.notify(result.error or "Download failed.", severity="error")
+
+        if result.success:
+            self.query_one("#download_progress", ProgressBar).update(progress=100)
 
         if result.output:
             tail = result.output[-20:]
@@ -277,7 +324,10 @@ class MainScreen(Screen[None]):
         self.query_one("#download_button", Button).display = not self.download_in_progress
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
         self.query_one("#clear_input_button", Button).disabled = self.download_in_progress
+        self.query_one("#copy_log_button", Button).display = bool(self.log_lines)
         has_log = self.download_in_progress or bool(self.log_lines)
+        self.query_one("#download_progress", ProgressBar).display = self.download_in_progress and not self.postprocess_active
+        self.query_one("#status_loading", LoadingIndicator).display = self.postprocess_active
         self.query_one("#log_widget", Log).display = has_log
 
     def on_input_changed(self, event: Input.Changed) -> None:
@@ -313,3 +363,17 @@ class MainScreen(Screen[None]):
         config = self.app.config
         self.query_one("#format_select", Select).value = config.output_format
         self.query_one("#quality_select", Select).value = config.quality
+
+    @classmethod
+    def _extract_progress(cls, line: str) -> float | None:
+        match = cls.PROGRESS_RE.search(line)
+        if not match:
+            return None
+        return float(match.group(1))
+
+    @classmethod
+    def _phase_status_message(cls, line: str) -> str | None:
+        for prefix, message in cls.PHASE_MESSAGES.items():
+            if line.startswith(prefix):
+                return message
+        return None

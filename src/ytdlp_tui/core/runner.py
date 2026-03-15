@@ -101,25 +101,46 @@ def _build_args(request: DownloadRequest, ytdlp_path: str, ffmpeg_path: str | No
     output_format = request.output_format
 
     if output_format == "mp3":
-        args.extend(["-f", "bestaudio/best" if quality == "high" else "worstaudio/bestaudio/best"])
-        args.extend(["-x", "--audio-format", "mp3", "--audio-quality", "0" if quality == "high" else "7"])
+        args.extend(["-f", _audio_selector_for_quality(quality)])
+        args.extend(["-x", "--audio-format", "mp3", "--audio-quality", _audio_quality_for(quality, high="0", medium="4", low="7")])
+    elif output_format == "m4a":
+        args.extend(["-f", _audio_selector_for_quality(quality)])
+        args.extend(["-x", "--audio-format", "m4a", "--audio-quality", _audio_quality_for(quality, high="0", medium="4", low="7")])
     elif output_format == "ogg":
-        args.extend(["-f", "bestaudio/best" if quality == "high" else "worstaudio/bestaudio/best"])
-        args.extend(["-x", "--audio-format", "vorbis", "--audio-quality", "4" if quality == "high" else "8"])
+        args.extend(["-f", _audio_selector_for_quality(quality)])
+        args.extend(["-x", "--audio-format", "vorbis", "--audio-quality", _audio_quality_for(quality, high="4", medium="6", low="8")])
     elif output_format == "mp4":
         if quality == "high":
             args.extend(["-f", "bestvideo*+bestaudio/best"])
+        elif quality == "medium":
+            args.extend(["-f", "bestvideo*[height<=720]+bestaudio/best[height<=720]/best[height<=720]/best"])
         else:
             args.extend(["-f", "worstvideo*+worstaudio/worst"])
         args.extend(["--remux-video", "mp4"])
     elif output_format == "webm":
         if quality == "high":
             args.extend(["-f", "bestvideo*[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best"])
+        elif quality == "medium":
+            args.extend(["-f", "bestvideo*[ext=webm][height<=720]+bestaudio[ext=webm]/best[ext=webm][height<=720]/best[height<=720]/best"])
         else:
             args.extend(["-f", "worstvideo*[ext=webm]+worstaudio[ext=webm]/worst[ext=webm]/worst"])
 
     args.extend(request.sources)
     return args
+
+
+def _audio_selector_for_quality(quality: str) -> str:
+    if quality == "low":
+        return "worstaudio/bestaudio/best"
+    return "bestaudio/best"
+
+
+def _audio_quality_for(quality: str, *, high: str, medium: str, low: str) -> str:
+    if quality == "high":
+        return high
+    if quality == "medium":
+        return medium
+    return low
 
 
 def _read_downloaded_files(path: Path) -> list[str]:

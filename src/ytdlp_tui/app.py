@@ -68,10 +68,6 @@ class YtDlpTuiApp(App[None]):
         color: $text-muted;
     }
 
-    #log_label {
-        margin: 0 0 1 0;
-    }
-
     Log#log_widget {
         border: round $panel-lighten-1;
         min-height: 12;
@@ -92,6 +88,34 @@ class YtDlpTuiApp(App[None]):
     .main-toolbar {
         height: auto;
         margin: 0 0 0 0;
+    }
+
+    #status_row {
+        layout: horizontal;
+        height: auto;
+        align-vertical: middle;
+    }
+
+    #status_message_group {
+        layout: horizontal;
+        width: auto;
+        height: auto;
+        align-vertical: middle;
+    }
+
+    #status_text {
+        width: auto;
+    }
+
+    ProgressBar#download_progress {
+        width: 24;
+        min-width: 24;
+        margin-right: 1;
+    }
+
+    LoadingIndicator#status_loading {
+        width: 8;
+        margin-left: 1;
     }
 
     #source_row {
