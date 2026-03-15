@@ -3,7 +3,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from textual import work
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Select, Static
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class MainScreen(Screen[None]):
-    BINDINGS = [("s", "settings", "Settings"), ("q", "quit", "Quit")]
+    BINDINGS = [("s", "settings", "Settings"), ("q", "quit_app", "Quit")]
     recent_files: list[str] = []
     last_request: DownloadRequest | None = None
     cancel_event: threading.Event | None = None
@@ -27,7 +27,7 @@ class MainScreen(Screen[None]):
         app = self.app
 
         yield Header()
-        yield Vertical(
+        yield VerticalScroll(
             Static("Download", classes="title"),
             Static("Paste a URL or search term to begin.", classes="subtitle"),
             Vertical(
@@ -89,6 +89,9 @@ class MainScreen(Screen[None]):
         from ytdlp_tui.ui.settings_screen import SettingsScreen
 
         self.app.push_screen(SettingsScreen())
+
+    def action_quit_app(self) -> None:
+        self.app.exit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "settings_button":
@@ -175,7 +178,7 @@ class MainScreen(Screen[None]):
     @work(thread=True)
     def _run_download(self, request: DownloadRequest) -> None:
         result = run_download(request, self.cancel_event)
-        self.call_from_thread(self._apply_download_result, result)
+        self.app.call_from_thread(self._apply_download_result, result)
 
     def _apply_download_result(self, result: DownloadResult) -> None:
         status_widget = self.query_one("#status_text", Static)

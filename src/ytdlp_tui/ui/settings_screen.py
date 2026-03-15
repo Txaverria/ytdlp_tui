@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from textual import work
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Static
 
@@ -11,7 +11,7 @@ from ytdlp_tui.core.platform import dependency_policy_for_current_platform, open
 
 
 class SettingsScreen(Screen[None]):
-    BINDINGS = [("escape", "pop_screen", "Back")]
+    BINDINGS = [("escape", "back", "Back")]
 
     def compose(self):
         app = self.app
@@ -21,7 +21,7 @@ class SettingsScreen(Screen[None]):
         policy = dependency_policy_for_current_platform()
 
         yield Header()
-        yield Vertical(
+        yield VerticalScroll(
             Static("Settings", classes="title"),
             Static("Configure where downloads go and how dependencies are managed.", classes="subtitle"),
             Vertical(
@@ -66,6 +66,9 @@ class SettingsScreen(Screen[None]):
         elif event.button.id == "install_ffmpeg_button":
             self._install_ffmpeg()
 
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
     def _save_settings(self) -> None:
         app = self.app
 
@@ -94,14 +97,14 @@ class SettingsScreen(Screen[None]):
 
     @work(thread=True)
     def _install_ytdlp(self) -> None:
-        self.call_from_thread(self.notify, "Installing or updating managed yt-dlp...")
+        self.app.call_from_thread(self.notify, "Installing or updating managed yt-dlp...")
         try:
             status = install_managed_ytdlp()
         except Exception as exc:
-            self.call_from_thread(self.notify, f"yt-dlp install failed: {exc}", severity="error")
+            self.app.call_from_thread(self.notify, f"yt-dlp install failed: {exc}", severity="error")
             return
 
-        self.call_from_thread(self._apply_ytdlp_status, status)
+        self.app.call_from_thread(self._apply_ytdlp_status, status)
 
     def _apply_ytdlp_status(self, status) -> None:
         self.app.ytdlp_status = status
@@ -110,14 +113,14 @@ class SettingsScreen(Screen[None]):
 
     @work(thread=True)
     def _install_ffmpeg(self) -> None:
-        self.call_from_thread(self.notify, "Installing or updating managed ffmpeg...")
+        self.app.call_from_thread(self.notify, "Installing or updating managed ffmpeg...")
         try:
             status = install_managed_ffmpeg()
         except Exception as exc:
-            self.call_from_thread(self.notify, f"ffmpeg install failed: {exc}", severity="error")
+            self.app.call_from_thread(self.notify, f"ffmpeg install failed: {exc}", severity="error")
             return
 
-        self.call_from_thread(self._apply_ffmpeg_status, status)
+        self.app.call_from_thread(self._apply_ffmpeg_status, status)
 
     def _apply_ffmpeg_status(self, status) -> None:
         self.app.ffmpeg_status = status

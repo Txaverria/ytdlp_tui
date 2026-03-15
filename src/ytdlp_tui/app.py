@@ -29,60 +29,61 @@ class YtDlpTuiApp(App[None]):
     .title {
         text-style: bold;
         color: #f4b860;
-        margin: 1 0 0 0;
+        margin: 0 0 0 0;
     }
 
     .subtitle {
         color: #9fb3c8;
-        margin: 0 0 1 0;
+        margin: 0 0 0 0;
     }
 
     .section-title {
         text-style: bold;
         color: #7dd3c7;
-        margin: 1 0 0 0;
+        margin: 0 0 0 0;
     }
 
     #main_panel, #settings_panel {
         width: 1fr;
         max-width: 108;
         height: 1fr;
-        margin: 1 2;
-        padding: 1 2;
+        margin: 0 1;
+        padding: 0 1;
         border: round #35506b;
         background: #13202c;
+        overflow-y: auto;
     }
 
     .actions {
         height: auto;
-        margin: 1 0;
+        margin: 0 0;
     }
 
     .section-block {
-        margin: 0 0 1 0;
-        padding: 0 0 1 0;
+        margin: 0 0 0 0;
+        padding: 0 0 0 0;
         border-bottom: solid #223243;
     }
 
     .status-box {
-        margin: 1 0 0 0;
-        padding: 1;
-        min-height: 3;
+        margin: 0 0 0 0;
+        padding: 0 1;
+        min-height: 1;
         border: round #35506b;
         background: #0d1721;
     }
 
     Button {
         margin-right: 1;
-        margin-bottom: 1;
+        margin-bottom: 0;
     }
 
     Input {
-        margin: 0 0 1 0;
+        margin: 0 0 0 0;
     }
 
     Select {
-        margin: 0 0 1 0;
+        margin: 0 0 0 0;
     }
 
     .note {
