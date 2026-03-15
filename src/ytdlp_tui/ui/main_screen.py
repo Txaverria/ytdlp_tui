@@ -1,4 +1,3 @@
-from pathlib import Path
 import threading
 from typing import TYPE_CHECKING
 
@@ -10,7 +9,6 @@ from textual.widgets import Button, Footer, Header, Input, Select, Static
 
 from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
-from ytdlp_tui.core.platform import open_in_file_manager
 from ytdlp_tui.core.runner import run_download
 from ytdlp_tui.ui.widgets.url_input import UrlInput
 
@@ -65,21 +63,23 @@ class MainScreen(Screen[None]):
         yield VerticalScroll(
             Static("", classes="spacer"),
             Static(self._build_hero(False), classes="hero", id="hero_text"),
-            Static("", id="status_meta", classes="muted"),
+            Static("", id="status_meta"),
             Static("", classes="spacer"),
-            Static("Ready.", id="status_text", classes="muted"),
+            Static("Ready.", id="status_text"),
             Static("", classes="spacer"),
             Vertical(
                 Horizontal(
                     Select(
                         [("MP3", "mp3"), ("OGG", "ogg"), ("MP4", "mp4"), ("WebM", "webm")],
                         value="mp4",
+                        allow_blank=False,
                         id="format_select",
                         prompt="Format",
                     ),
                     Select(
                         [("High", "high"), ("Low", "low")],
                         value="high",
+                        allow_blank=False,
                         id="quality_select",
                         prompt="Quality",
                     ),
@@ -98,12 +98,7 @@ class MainScreen(Screen[None]):
                 ),
                 classes="main-toolbar",
             ),
-            Horizontal(
-                Button("Open Latest File", id="open_latest_file_button"),
-                Button("Open Latest File Folder", id="open_latest_file_folder_button"),
-                id="recent_actions",
-            ),
-            Static("", id="recent_files_text", classes="note",),
+            Static("Log:", id="log_label"),
             Static("", id="log_text", classes="note"),
             id="main_panel",
         )
@@ -130,10 +125,6 @@ class MainScreen(Screen[None]):
             self._clear_input()
         elif event.button.id == "settings_button":
             self.action_settings()
-        elif event.button.id == "open_latest_file_button":
-            self._open_latest_file()
-        elif event.button.id == "open_latest_file_folder_button":
-            self._open_latest_file_folder()
         elif event.button.id == "download_button":
             self._prepare_download()
         elif event.button.id == "cancel_download_button":
@@ -141,6 +132,9 @@ class MainScreen(Screen[None]):
 
     def _clear_input(self) -> None:
         self.query_one("#input_group", UrlInput).clear()
+        self.log_lines = []
+        self.query_one("#log_text", Static).update("")
+        self._update_action_visibility()
 
     def on_screen_resume(self) -> None:
         app = self.app
@@ -176,7 +170,6 @@ class MainScreen(Screen[None]):
         self.log_lines = []
         status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
         self.query_one("#log_text", Static).update("")
-        self.query_one("#recent_files_text", Static).update("")
         self._update_action_visibility()
         self._run_download(request)
 
@@ -215,16 +208,11 @@ class MainScreen(Screen[None]):
         if line.startswith("[download]"):
             status_widget.update(line)
 
-        header = "Activity:"
-        if self.log_lines and self.log_lines[-1].startswith("[download]"):
-            header = f"Latest progress: {self.log_lines[-1]}\n\nActivity:"
-
-        self.query_one("#log_text", Static).update(header + "\n" + "\n".join(self.log_lines))
+        self.query_one("#log_text", Static).update("\n".join(self.log_lines))
 
     def _apply_download_result(self, result: DownloadResult) -> None:
         status_widget = self.query_one("#status_text", Static)
         log_widget = self.query_one("#log_text", Static)
-        files_widget = self.query_one("#recent_files_text", Static)
         self.download_in_progress = False
         self.cancel_event = None
         self.recent_files = result.downloaded_files
@@ -240,46 +228,11 @@ class MainScreen(Screen[None]):
             status_widget.update(result.summary or result.error or "Download failed.")
             self.notify(result.error or "Download failed.", severity="error")
 
-        if result.downloaded_files:
-            files_widget.update("Recent files:\n" + "\n".join(f"- {path}" for path in result.downloaded_files))
-        else:
-            files_widget.update("")
-
         if result.output:
             tail = result.output[-20:]
-            header = "Activity:"
-            if result.progress_line:
-                header = f"Latest progress: {result.progress_line}\n\nActivity:"
-            log_widget.update(header + "\n" + "\n".join(tail))
+            log_widget.update("\n".join(tail))
         else:
             log_widget.update("")
-
-    def _open_latest_file(self) -> None:
-        latest = self._latest_file()
-        if not latest:
-            self.notify("No downloaded file is available yet.", severity="warning")
-            return
-
-        try:
-            open_in_file_manager(latest)
-            self.notify("Opened latest downloaded file.")
-        except Exception as exc:
-            self.notify(f"Could not open file: {exc}", severity="error")
-
-    def _open_latest_file_folder(self) -> None:
-        latest = self._latest_file()
-        if not latest:
-            self.notify("No downloaded file is available yet.", severity="warning")
-            return
-
-        try:
-            open_in_file_manager(Path(latest).parent)
-            self.notify("Opened latest file folder.")
-        except Exception as exc:
-            self.notify(f"Could not open folder: {exc}", severity="error")
-
-    def _latest_file(self) -> str | None:
-        return self.recent_files[-1] if self.recent_files else None
 
     def _cancel_download(self) -> None:
         if not self.download_in_progress or self.cancel_event is None:
@@ -293,9 +246,9 @@ class MainScreen(Screen[None]):
     def _update_action_visibility(self) -> None:
         self.query_one("#download_button", Button).display = not self.download_in_progress
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
-        has_recent = bool(self.recent_files)
-        self.query_one("#recent_actions", Horizontal).display = has_recent
-        self.query_one("#recent_files_text", Static).display = has_recent
+        has_log = self.download_in_progress or bool(self.log_lines)
+        self.query_one("#log_label", Static).display = has_log
+        self.query_one("#log_text", Static).display = has_log
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "download_input":

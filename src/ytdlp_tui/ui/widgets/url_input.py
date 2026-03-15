@@ -9,6 +9,7 @@ class PasteFriendlyInput(Input):
             flattened = " ".join(part.strip() for part in event.text.splitlines() if part.strip())
             self.insert_text_at_cursor(flattened)
         event.stop()
+        event.prevent_default()
 
 
 class UrlInput(Widget):

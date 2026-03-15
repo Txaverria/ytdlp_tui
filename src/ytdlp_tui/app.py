@@ -73,6 +73,19 @@ class YtDlpTuiApp(App[None]):
         color: #c7d3df;
     }
 
+    #log_label {
+        margin: 0 0 1 0;
+    }
+
+    #log_text {
+        color: #c7d3df;
+        border: round #2a3440;
+        padding: 0 1;
+        min-height: 12;
+        height: auto;
+        margin: 0 0 1 0;
+    }
+
     .muted {
         color: #90a4b8;
     }
