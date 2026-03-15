@@ -21,7 +21,7 @@ def default_config() -> AppConfig:
         download_dir=get_default_downloads_dir(),
         output_format="mp4",
         quality="high",
-        theme=None,
+        theme="monokai",
     )
 
 
