@@ -238,3 +238,15 @@ class YtDlpTuiApp(App[None]):
             refresh_for_theme = getattr(screen, "refresh_for_theme", None)
             if callable(refresh_for_theme):
                 refresh_for_theme()
+
+    def action_quit(self) -> None:
+        main_screen = self._main_screen()
+        if main_screen is not None and not main_screen.request_quit():
+            return
+        self.exit()
+
+    def _main_screen(self) -> MainScreen | None:
+        for screen in self.screen_stack:
+            if isinstance(screen, MainScreen):
+                return screen
+        return None

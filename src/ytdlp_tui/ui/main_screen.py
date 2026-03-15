@@ -33,6 +33,7 @@ class MainScreen(Screen[None]):
     cancel_event: threading.Event | None = None
     download_in_progress: bool = False
     postprocess_active: bool = False
+    quit_after_download: bool = False
 
     def _hero_colors(self) -> tuple[str, str]:
         theme = self.app.current_theme
@@ -146,7 +147,7 @@ class MainScreen(Screen[None]):
         self.app.push_screen(SettingsScreen())
 
     def action_quit_app(self) -> None:
-        self.app.exit()
+        self.app.action_quit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "clear_input_button":
@@ -223,6 +224,7 @@ class MainScreen(Screen[None]):
         self.cancel_event = threading.Event()
         self.download_in_progress = True
         self.postprocess_active = False
+        self.quit_after_download = False
         self.log_lines = []
         item_count = len(request.sources)
         item_label = "item" if item_count == 1 else "items"
@@ -314,6 +316,10 @@ class MainScreen(Screen[None]):
         else:
             log_widget.clear()
 
+        if self.quit_after_download:
+            self.quit_after_download = False
+            self.app.exit()
+
     def _cancel_download(self) -> None:
         if not self.download_in_progress or self.cancel_event is None:
             self._set_status_text("No download is running.", "warning")
@@ -380,6 +386,18 @@ class MainScreen(Screen[None]):
             status_widget.set_class(True, "status-warning")
         elif tone == "error":
             status_widget.set_class(True, "status-error")
+
+    def request_quit(self) -> bool:
+        if not self.download_in_progress or self.cancel_event is None:
+            return True
+
+        self.quit_after_download = True
+        self.cancel_event.set()
+        self.postprocess_active = False
+        self._set_status_text("Cancelling download before exit...", "warning")
+        self.notify("Cancelling active download before exit...", severity="warning")
+        self._update_action_visibility()
+        return False
 
     @classmethod
     def _extract_progress(cls, line: str) -> float | None:

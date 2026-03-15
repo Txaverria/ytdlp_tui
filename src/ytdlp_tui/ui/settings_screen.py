@@ -70,7 +70,7 @@ class SettingsScreen(Screen[None]):
         self.app.pop_screen()
 
     def action_quit_app(self) -> None:
-        self.app.exit()
+        self.app.action_quit()
 
     def _save_settings(self) -> None:
         app = self.app
