@@ -85,7 +85,13 @@ class SettingsScreen(Screen[None]):
         path = Path(download_dir).expanduser()
         path.mkdir(parents=True, exist_ok=True)
 
-        app.update_config(AppConfig(download_dir=str(path)))
+        app.update_config(
+            AppConfig(
+                download_dir=str(path),
+                output_format=app.config.output_format,
+                quality=app.config.quality,
+            )
+        )
         app.refresh_dependency_statuses()
         self.notify("Settings saved.")
 

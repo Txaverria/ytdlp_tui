@@ -12,32 +12,28 @@ class YtDlpTuiApp(App[None]):
     CSS = """
     Screen {
         layout: vertical;
-        background: #10151c;
-        color: #f3efe6;
     }
 
     Header {
-        background: #d96c2d;
-        color: #10151c;
+        background: $primary;
+        color: $text;
     }
 
     Footer {
-        background: #18222d;
+        background: $surface;
     }
 
     .title {
         text-style: bold;
-        color: #f4b860;
         margin: 0 0 0 0;
     }
 
     .subtitle {
-        color: #9fb3c8;
+        color: $text-muted;
         margin: 0 0 0 0;
     }
 
     .hero {
-        color: #f4b860;
         text-style: bold;
         margin: 0 0 1 0;
     }
@@ -47,7 +43,6 @@ class YtDlpTuiApp(App[None]):
         height: 1fr;
         margin: 0 1;
         padding: 0 1;
-        background: #10151c;
         overflow-y: auto;
     }
 
@@ -70,24 +65,24 @@ class YtDlpTuiApp(App[None]):
     }
 
     .note {
-        color: #c7d3df;
+        color: $text-muted;
     }
 
     #log_label {
         margin: 0 0 1 0;
     }
 
-    #log_text {
-        color: #c7d3df;
-        border: round #2a3440;
-        padding: 0 1;
+    Log#log_widget {
+        border: round $panel-lighten-1;
         min-height: 12;
         height: auto;
         margin: 0 0 1 0;
+        background: $panel;
+        color: $text-muted;
     }
 
     .muted {
-        color: #90a4b8;
+        color: $text-muted;
     }
 
     .spacer {
@@ -187,6 +182,7 @@ class YtDlpTuiApp(App[None]):
     def on_mount(self) -> None:
         self.config = load_config()
         self.refresh_dependency_statuses()
+        self.theme_changed_signal.subscribe(self, self._refresh_theme_dependent_widgets)
         self.push_screen(MainScreen())
 
     config: AppConfig
@@ -200,3 +196,9 @@ class YtDlpTuiApp(App[None]):
     def refresh_dependency_statuses(self) -> None:
         self.ytdlp_status = detect_ytdlp()
         self.ffmpeg_status = detect_ffmpeg()
+
+    def _refresh_theme_dependent_widgets(self, _theme) -> None:
+        for screen in self.screen_stack:
+            refresh_for_theme = getattr(screen, "refresh_for_theme", None)
+            if callable(refresh_for_theme):
+                refresh_for_theme()

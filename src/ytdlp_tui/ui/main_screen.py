@@ -2,10 +2,11 @@ import threading
 from typing import TYPE_CHECKING
 
 from rich.text import Text
+from textual.color import Color
 from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Select, Static
+from textual.widgets import Button, Footer, Header, Input, Log, Select, Static
 
 from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
@@ -24,8 +25,14 @@ class MainScreen(Screen[None]):
     cancel_event: threading.Event | None = None
     download_in_progress: bool = False
 
-    @staticmethod
-    def _build_hero(compact: bool) -> Text:
+    def _hero_colors(self) -> tuple[str, str]:
+        theme = self.app.current_theme
+        base = Color.parse(theme.secondary or theme.primary or "#cba6f7")
+        background = Color.parse(theme.background or theme.surface or "#181825")
+        shaded = base.blend(background, 0.45)
+        return base.hex6, shaded.hex6
+
+    def _build_hero(self, compact: bool) -> Text:
         if compact:
             raw = (
                 "██    ██ ████████ ██████  ██      ██████        ████████ ██    ██ ██ \n"
@@ -46,14 +53,15 @@ class MainScreen(Screen[None]):
                 "   ▒▒▒▒▒       ▒▒▒▒▒    ▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒                            ▒▒▒▒▒      ▒▒▒▒▒▒▒▒   ▒▒▒▒▒\n"
             )
 
+        solid_color, shaded_color = self._hero_colors()
         text = Text()
         for char in raw:
             if char == "█":
-                text.append(char, style="#cba6f7")
+                text.append(char, style=solid_color)
             elif char == "▒":
-                text.append(char, style="#5a3c75")
+                text.append(char, style=shaded_color)
             else:
-                text.append(char, style="#cba6f7")
+                text.append(char, style=solid_color)
         return text
 
     def compose(self):
@@ -97,7 +105,7 @@ class MainScreen(Screen[None]):
                 classes="main-toolbar",
             ),
             Static("Log:", id="log_label"),
-            Static("", id="log_text", classes="note"),
+            Log(id="log_widget", auto_scroll=True),
             id="main_panel",
         )
         yield Footer()
@@ -110,6 +118,10 @@ class MainScreen(Screen[None]):
 
     def on_resize(self) -> None:
         self._update_layout_mode()
+
+    def refresh_for_theme(self) -> None:
+        self._update_layout_mode()
+        self.refresh()
 
     def action_settings(self) -> None:
         from ytdlp_tui.ui.settings_screen import SettingsScreen
@@ -132,13 +144,14 @@ class MainScreen(Screen[None]):
     def _clear_input(self) -> None:
         self.query_one("#input_group", UrlInput).clear()
         self.log_lines = []
-        self.query_one("#log_text", Static).update("")
+        self.query_one("#log_widget", Log).clear()
         self._update_action_visibility()
 
     def on_screen_resume(self) -> None:
         app = self.app
         app.refresh_dependency_statuses()
         self._sync_selects_from_config()
+        self._update_layout_mode()
         self._refresh_status()
         self._update_action_visibility()
 
@@ -182,7 +195,7 @@ class MainScreen(Screen[None]):
         self.download_in_progress = True
         self.log_lines = []
         status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
-        self.query_one("#log_text", Static).update("")
+        self.query_one("#log_widget", Log).clear()
         self._update_action_visibility()
         self._run_download(request)
 
@@ -221,11 +234,14 @@ class MainScreen(Screen[None]):
         if line.startswith("[download]"):
             status_widget.update(line)
 
-        self.query_one("#log_text", Static).update("\n".join(self.log_lines))
+        log_widget = self.query_one("#log_widget", Log)
+        log_widget.clear()
+        for entry in self.log_lines:
+            log_widget.write_line(entry)
 
     def _apply_download_result(self, result: DownloadResult) -> None:
         status_widget = self.query_one("#status_text", Static)
-        log_widget = self.query_one("#log_text", Static)
+        log_widget = self.query_one("#log_widget", Log)
         self.download_in_progress = False
         self.cancel_event = None
         self.recent_files = result.downloaded_files
@@ -243,9 +259,11 @@ class MainScreen(Screen[None]):
 
         if result.output:
             tail = result.output[-20:]
-            log_widget.update("\n".join(tail))
+            log_widget.clear()
+            for entry in tail:
+                log_widget.write_line(entry)
         else:
-            log_widget.update("")
+            log_widget.clear()
 
     def _cancel_download(self) -> None:
         if not self.download_in_progress or self.cancel_event is None:
@@ -261,7 +279,7 @@ class MainScreen(Screen[None]):
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
         has_log = self.download_in_progress or bool(self.log_lines)
         self.query_one("#log_label", Static).display = has_log
-        self.query_one("#log_text", Static).display = has_log
+        self.query_one("#log_widget", Log).display = has_log
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "download_input":
