@@ -80,7 +80,7 @@ class MainScreen(Screen[None]):
         yield VerticalScroll(
             Static("", classes="spacer"),
             Static(self._build_hero(False), classes="hero", id="hero_text"),
-            Static("", id="status_meta"),
+            Static("", id="status_meta", classes="muted"),
             Static("", classes="spacer"),
             Horizontal(
                 ProgressBar(total=100, show_eta=False, show_percentage=False, id="download_progress"),
@@ -185,6 +185,7 @@ class MainScreen(Screen[None]):
 
     def _prepare_download(self) -> None:
         if self.download_in_progress:
+            self._set_status_text("A download is already running.", "warning")
             self.notify("A download is already running.", severity="warning")
             return
 
@@ -196,12 +197,12 @@ class MainScreen(Screen[None]):
         status_widget = self.query_one("#status_text", Static)
 
         if output_format is Select.BLANK:
-            status_widget.update("Select a format before downloading.")
+            self._set_status_text("Select a format before downloading.", "error")
             self.notify("Select a format before downloading.", severity="error")
             return
 
         if quality is Select.BLANK:
-            status_widget.update("Select a quality before downloading.")
+            self._set_status_text("Select a quality before downloading.", "error")
             self.notify("Select a quality before downloading.", severity="error")
             return
 
@@ -214,7 +215,7 @@ class MainScreen(Screen[None]):
 
         errors = validate_download_request(request)
         if errors:
-            status_widget.update("\n".join(errors))
+            self._set_status_text("\n".join(errors), "error")
             self.notify(errors[0], severity="error")
             return
 
@@ -223,7 +224,9 @@ class MainScreen(Screen[None]):
         self.download_in_progress = True
         self.postprocess_active = False
         self.log_lines = []
-        status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
+        item_count = len(request.sources)
+        item_label = "item" if item_count == 1 else "items"
+        self._set_status_text(f"Starting download for {item_count} {item_label}...", "normal")
         self.query_one("#log_widget", Log).clear()
         self.query_one("#download_progress", ProgressBar).update(total=100, progress=0)
         self._update_action_visibility()
@@ -263,7 +266,7 @@ class MainScreen(Screen[None]):
         status_widget = self.query_one("#status_text", Static)
         if line.startswith("[download]"):
             self.postprocess_active = False
-            status_widget.update(line)
+            self._set_status_text(line, "normal")
             progress = self._extract_progress(line)
             if progress is not None:
                 self.query_one("#download_progress", ProgressBar).update(progress=progress)
@@ -271,7 +274,7 @@ class MainScreen(Screen[None]):
             phase_message = self._phase_status_message(line)
             if phase_message:
                 self.postprocess_active = True
-                status_widget.update(phase_message)
+                self._set_status_text(phase_message, "warning")
                 self.query_one("#download_progress", ProgressBar).update(progress=100)
 
         self._update_action_visibility()
@@ -291,13 +294,13 @@ class MainScreen(Screen[None]):
         self._update_action_visibility()
 
         if result.cancelled:
-            status_widget.update(result.summary or "Download cancelled.")
+            self._set_status_text(result.summary or "Download cancelled.", "warning")
             self.notify("Download cancelled.", severity="warning")
         elif result.success:
-            status_widget.update(result.summary or "Download finished.")
+            self._set_status_text(result.summary or "Download finished.", "success")
             self.notify("Download finished.")
         else:
-            status_widget.update(result.summary or result.error or "Download failed.")
+            self._set_status_text(result.summary or result.error or "Download failed.", "error")
             self.notify(result.error or "Download failed.", severity="error")
 
         if result.success:
@@ -313,11 +316,12 @@ class MainScreen(Screen[None]):
 
     def _cancel_download(self) -> None:
         if not self.download_in_progress or self.cancel_event is None:
+            self._set_status_text("No download is running.", "warning")
             self.notify("No download is running.", severity="warning")
             return
 
         self.cancel_event.set()
-        self.query_one("#status_text", Static).update("Cancelling download...")
+        self._set_status_text("Cancelling download...", "warning")
         self.notify("Cancelling download...")
 
     def _update_action_visibility(self) -> None:
@@ -363,6 +367,19 @@ class MainScreen(Screen[None]):
         config = self.app.config
         self.query_one("#format_select", Select).value = config.output_format
         self.query_one("#quality_select", Select).value = config.quality
+
+    def _set_status_text(self, text: str, tone: str = "normal") -> None:
+        status_widget = self.query_one("#status_text", Static)
+        status_widget.update(text)
+        status_widget.set_class(False, "status-success")
+        status_widget.set_class(False, "status-warning")
+        status_widget.set_class(False, "status-error")
+        if tone == "success":
+            status_widget.set_class(True, "status-success")
+        elif tone == "warning":
+            status_widget.set_class(True, "status-warning")
+        elif tone == "error":
+            status_widget.set_class(True, "status-error")
 
     @classmethod
     def _extract_progress(cls, line: str) -> float | None:

@@ -81,6 +81,18 @@ class YtDlpTuiApp(App[None]):
         color: $text-muted;
     }
 
+    #status_text.status-success {
+        color: $success;
+    }
+
+    #status_text.status-warning {
+        color: $warning;
+    }
+
+    #status_text.status-error {
+        color: $error;
+    }
+
     .spacer {
         height: 1;
     }

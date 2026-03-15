@@ -171,7 +171,9 @@ def _build_summary(
 
     if success:
         if downloaded_files:
-            return f"Finished successfully. {len(downloaded_files)} file(s) ready."
+            file_count = len(downloaded_files)
+            file_label = "file" if file_count == 1 else "files"
+            return f"Finished successfully. {file_count} {file_label} ready."
 
         destination_line = _last_matching_line(output_lines, "[Merger] Merging formats into ")
         if destination_line:
