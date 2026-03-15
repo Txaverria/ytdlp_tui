@@ -36,8 +36,10 @@ The installer downloads the latest Windows release, installs the app, and create
 
 - `Local AppData` (recommended)
 - `Program Files`
-- a custom folder
-- the current folder
+- a custom parent folder, installed as `...\ytdlp-tui`
+- the current folder, installed as `.\ytdlp-tui`
+
+The installer shows the final destination and requires confirmation before replacing an existing app folder.
 
 To uninstall on Windows:
 

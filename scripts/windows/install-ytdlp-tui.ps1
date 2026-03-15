@@ -1,5 +1,6 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+Clear-Host
 
 $AppName = "ytdlp-tui"
 $RepoOwner = "Txaverria"
@@ -52,19 +53,51 @@ function Select-InstallDirectory {
     Write-Host ""
 
     while ($true) {
-        $choice = Read-Host "Enter 1, 2, 3, or 4"
+        Write-Host "Enter 1, 2, 3, or 4"
+        $choice = Read-Host "> "
         switch ($choice) {
             "1" { return $localDir }
             "2" { return $programFilesDir }
             "3" {
-                $customDir = Read-Host "Enter the full install path"
+                Write-Host ""
+                Write-Host "Enter the parent folder for installation"
+                $customDir = Read-Host "> "
                 if ([string]::IsNullOrWhiteSpace($customDir)) {
                     Write-Host "Path cannot be empty."
                     continue
                 }
-                return $customDir
+                $resolvedDir = Join-Path $customDir $AppName
+                return $resolvedDir
             }
-            "4" { return $currentDir }
+            "4" {
+                $resolvedDir = Join-Path $currentDir $AppName
+                return $resolvedDir
+            }
+            default { Write-Host "Invalid selection." }
+        }
+    }
+}
+
+function Confirm-InstallDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$DestinationDir
+    )
+
+    Write-Host ""
+    Write-Host "The app will be installed to:"
+    Write-Host "  $DestinationDir"
+    Write-Host ""
+    if (Test-Path $DestinationDir) {
+        Write-Host "Warning: this folder already exists and will be replaced."
+        Write-Host ""
+    }
+
+    while ($true) {
+        Write-Host "Type INSTALL to continue or CANCEL to stop"
+        $choice = Read-Host "> "
+        switch ($choice) {
+            "INSTALL" { return }
+            "CANCEL" { throw "Installation cancelled." }
             default { Write-Host "Invalid selection." }
         }
     }
@@ -102,6 +135,7 @@ function Copy-AppBundle {
 }
 
 $installDir = Select-InstallDirectory
+Confirm-InstallDirectory -DestinationDir $installDir
 $tempRoot = Join-Path $env:TEMP "$AppName-install-$([guid]::NewGuid().ToString('N'))"
 $zipPath = Join-Path $tempRoot $AssetName
 $extractDir = Join-Path $tempRoot "extract"
