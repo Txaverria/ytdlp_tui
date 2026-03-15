@@ -1,46 +1,50 @@
 # Implementation Roadmap
 
-## Product Direction
+## Current State
 
-This repo is being rebuilt as a Python + Textual application instead of extending the current PowerShell launcher.
+`ytdlp-tui` is a working Python + Textual application with:
+
+- a main download screen
+- a settings screen
+- persisted download format and quality defaults
+- Windows-managed `yt-dlp` and `ffmpeg` install flows
+- live download progress, logs, and post-processing states
+- packaged build automation through GitHub Actions
 
 ## Platform Policy
 
 ### Linux
 
-- Prefer `yt-dlp` from the user's system
-- Prefer `ffmpeg` from the user's system
-- Offer managed installs later only as a fallback
+- Prefer system `yt-dlp`
+- Prefer system `ffmpeg`
+- Detect `Deno` when available
 
 ### macOS
 
-- Prefer `yt-dlp` from the user's system
-- Prefer `ffmpeg` from the user's system
-- Offer managed installs later only as a fallback
+- Prefer system `yt-dlp`
+- Prefer system `ffmpeg`
+- Detect `Deno` when available
 
 ### Windows
 
-- Default to managed `yt-dlp`
-- Default to managed `ffmpeg`
-- Avoid requiring users to preinstall either dependency
+- Support managed `yt-dlp` installation
+- Support managed `ffmpeg` and `ffprobe` installation
+- Store managed binaries in a local `bin/` directory for portable use
+- Detect `Deno` when available
 
-## Planned Commit Sequence
+## Current Focus
 
-1. Bootstrap the Python/Textual repo and preserve the legacy launcher.
-2. Add the main app shell, screens, and persisted settings.
-3. Add platform-aware path handling and file/folder open actions.
-4. Add download job execution and in-app progress/logging.
-5. Add `yt-dlp` discovery and management policy by platform.
-6. Add `ffmpeg` discovery and management policy by platform.
-7. Add GitHub packaging and release automation.
+The current work is release-oriented rather than foundational. The app is already functional, so the remaining work is mainly:
 
-## First Milestone
+- packaged build validation on all target platforms
+- release workflow improvements
+- runtime edge-case handling
+- documentation and release polish
 
-The first milestone is a runnable Textual app with:
+## Near-Term Tasks
 
-- a main download screen
-- a settings screen
-- persistent app settings
-- platform-aware dependency policy
-
-No actual downloading happens in milestone one; that comes after the UI shell is stable.
+1. Validate packaged artifacts on Windows, macOS, and Linux.
+2. Improve handling for terminal interrupts such as `Ctrl+C`.
+3. Consider publishing GitHub Releases automatically from tag builds.
+4. Continue refining dependency guidance for YouTube, Deno, and browser cookies.
+5. Keep README and release instructions aligned with actual behavior.
