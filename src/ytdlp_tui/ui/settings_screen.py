@@ -99,10 +99,11 @@ class SettingsScreen(Screen[None]):
 
     @work(thread=True)
     def _install_ytdlp(self) -> None:
-        self.app.call_from_thread(self.notify, "Installing or updating managed yt-dlp...")
+        self.app.call_from_thread(self._set_dependency_progress, "#ytdlp_detail", "Starting yt-dlp install...")
         try:
-            status = install_managed_ytdlp()
+            status = install_managed_ytdlp(lambda message: self.app.call_from_thread(self._set_dependency_progress, "#ytdlp_detail", message))
         except Exception as exc:
+            self.app.call_from_thread(self._set_dependency_progress, "#ytdlp_detail", self._dependency_detail(self.app.ytdlp_status))
             self.app.call_from_thread(self.notify, f"yt-dlp install failed: {exc}", severity="error")
             return
 
@@ -115,10 +116,11 @@ class SettingsScreen(Screen[None]):
 
     @work(thread=True)
     def _install_ffmpeg(self) -> None:
-        self.app.call_from_thread(self.notify, "Installing or updating managed ffmpeg...")
+        self.app.call_from_thread(self._set_dependency_progress, "#ffmpeg_detail", "Starting ffmpeg install...")
         try:
-            status = install_managed_ffmpeg()
+            status = install_managed_ffmpeg(lambda message: self.app.call_from_thread(self._set_dependency_progress, "#ffmpeg_detail", message))
         except Exception as exc:
+            self.app.call_from_thread(self._set_dependency_progress, "#ffmpeg_detail", self._dependency_detail(self.app.ffmpeg_status))
             self.app.call_from_thread(self.notify, f"ffmpeg install failed: {exc}", severity="error")
             return
 
@@ -128,6 +130,9 @@ class SettingsScreen(Screen[None]):
         self.app.ffmpeg_status = status
         self.query_one("#ffmpeg_detail", Static).update(self._dependency_detail(status))
         self.notify("Managed ffmpeg is ready.")
+
+    def _set_dependency_progress(self, selector: str, message: str) -> None:
+        self.query_one(selector, Static).update(message)
 
     @staticmethod
     def _dependency_detail(status) -> str:

@@ -16,7 +16,7 @@ def validate_download_request(request: DownloadRequest) -> list[str]:
     if not ytdlp.available:
         errors.append(ytdlp.message or "yt-dlp is not available.")
 
-    if request.output_format in {"mp3", "ogg", "mp4"}:
+    if request.output_format in {"mp3", "m4a", "ogg", "mp4", "webm"}:
         ffmpeg = detect_ffmpeg()
         if not ffmpeg.available:
             errors.append(ffmpeg.message or "ffmpeg is not available.")

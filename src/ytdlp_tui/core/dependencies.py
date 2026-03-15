@@ -7,6 +7,7 @@ import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
+from typing import Callable
 
 from ytdlp_tui.core.models import DependencyStatus
 from ytdlp_tui.core.paths import managed_bin_dir
@@ -70,9 +71,11 @@ def detect_ytdlp() -> DependencyStatus:
 def detect_ffmpeg() -> DependencyStatus:
     system = current_platform()
     system_path = shutil.which("ffmpeg")
+    system_probe_path = shutil.which("ffprobe")
     managed_path = managed_ffmpeg_path()
+    managed_probe_path = managed_path.with_name("ffprobe.exe" if system == "windows" else "ffprobe")
 
-    if system in {"linux", "macos"} and system_path:
+    if system in {"linux", "macos"} and system_path and system_probe_path:
         return DependencyStatus(
             name="ffmpeg",
             available=True,
@@ -81,7 +84,7 @@ def detect_ffmpeg() -> DependencyStatus:
             path=system_path,
         )
 
-    if managed_path.exists():
+    if managed_path.exists() and managed_probe_path.exists():
         return DependencyStatus(
             name="ffmpeg",
             available=True,
@@ -90,12 +93,21 @@ def detect_ffmpeg() -> DependencyStatus:
             path=str(managed_path),
         )
 
-    if system_path:
+    if system_path and system_probe_path:
         return DependencyStatus(
             name="ffmpeg",
             available=True,
             source="system",
             version=_read_ffmpeg_version(system_path),
+            path=system_path,
+        )
+
+    if system_path and not system_probe_path:
+        return DependencyStatus(
+            name="ffmpeg",
+            available=False,
+            source="partial",
+            message="ffmpeg was found, but ffprobe is missing.",
             path=system_path,
         )
 
@@ -107,7 +119,7 @@ def detect_ffmpeg() -> DependencyStatus:
     )
 
 
-def install_managed_ytdlp() -> DependencyStatus:
+def install_managed_ytdlp(progress_callback: Callable[[str], None] | None = None) -> DependencyStatus:
     destination = managed_ytdlp_path()
     destination.parent.mkdir(parents=True, exist_ok=True)
 
@@ -118,9 +130,9 @@ def install_managed_ytdlp() -> DependencyStatus:
         temp_path = Path(tmp.name)
 
     try:
-        with urllib.request.urlopen(url) as response, temp_path.open("wb") as output:
-            shutil.copyfileobj(response, output)
+        _download_to_path(url, temp_path, progress_callback, "yt-dlp")
 
+        _notify(progress_callback, "Installing yt-dlp...")
         _make_executable(temp_path)
         temp_path.replace(destination)
     finally:
@@ -129,7 +141,7 @@ def install_managed_ytdlp() -> DependencyStatus:
     return detect_ytdlp()
 
 
-def install_managed_ffmpeg() -> DependencyStatus:
+def install_managed_ffmpeg(progress_callback: Callable[[str], None] | None = None) -> DependencyStatus:
     system = current_platform()
     if system != "windows":
         raise RuntimeError("Managed ffmpeg install is currently implemented for Windows only.")
@@ -143,14 +155,15 @@ def install_managed_ffmpeg() -> DependencyStatus:
     extract_dir = archive_path.with_suffix("")
 
     try:
-        with urllib.request.urlopen(WINDOWS_FFMPEG_ZIP_URL) as response, archive_path.open("wb") as output:
-            shutil.copyfileobj(response, output)
+        _download_to_path(WINDOWS_FFMPEG_ZIP_URL, archive_path, progress_callback, "ffmpeg")
 
+        _notify(progress_callback, "Extracting ffmpeg archive...")
         with zipfile.ZipFile(archive_path) as archive:
             archive.extractall(extract_dir)
 
         bin_dir = _find_ffmpeg_bin_dir(extract_dir)
-        for tool_name in ("ffmpeg.exe", "ffprobe.exe", "ffplay.exe"):
+        _notify(progress_callback, "Installing ffmpeg and ffprobe...")
+        for tool_name in ("ffmpeg.exe", "ffprobe.exe"):
             source = bin_dir / tool_name
             if source.exists():
                 shutil.copy2(source, destination_dir / tool_name)
@@ -210,3 +223,30 @@ def _find_ffmpeg_bin_dir(root: Path) -> Path:
         if (candidate / "ffmpeg.exe").exists():
             return candidate
     raise RuntimeError("Could not find ffmpeg binaries in the downloaded archive.")
+
+
+def _download_to_path(
+    url: str,
+    destination: Path,
+    progress_callback: Callable[[str], None] | None,
+    label: str,
+) -> None:
+    _notify(progress_callback, f"Downloading {label}...")
+    with urllib.request.urlopen(url) as response, destination.open("wb") as output:
+        total = response.headers.get("Content-Length")
+        total_bytes = int(total) if total and total.isdigit() else None
+        downloaded = 0
+        while True:
+            chunk = response.read(1024 * 256)
+            if not chunk:
+                break
+            output.write(chunk)
+            downloaded += len(chunk)
+            if total_bytes:
+                percent = downloaded * 100 / total_bytes
+                _notify(progress_callback, f"Downloading {label}... {percent:.0f}%")
+
+
+def _notify(progress_callback: Callable[[str], None] | None, message: str) -> None:
+    if progress_callback is not None:
+        progress_callback(message)

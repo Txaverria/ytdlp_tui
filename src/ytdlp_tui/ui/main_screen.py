@@ -9,8 +9,15 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, LoadingIndicator, Log, ProgressBar, Select, Static
 
+from ytdlp_tui.core.dependencies import (
+    detect_ffmpeg,
+    detect_ytdlp,
+    install_managed_ffmpeg,
+    install_managed_ytdlp,
+)
 from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
+from ytdlp_tui.core.platform import current_platform
 from ytdlp_tui.core.runner import run_download
 from ytdlp_tui.ui.widgets.url_input import UrlInput
 
@@ -34,6 +41,7 @@ class MainScreen(Screen[None]):
     download_in_progress: bool = False
     postprocess_active: bool = False
     quit_after_download: bool = False
+    dependency_install_in_progress: bool = False
 
     def _hero_colors(self) -> tuple[str, str]:
         theme = self.app.current_theme
@@ -185,7 +193,7 @@ class MainScreen(Screen[None]):
         self._update_action_visibility()
 
     def _prepare_download(self) -> None:
-        if self.download_in_progress:
+        if self.download_in_progress or self.dependency_install_in_progress:
             self._set_status_text("A download is already running.", "warning")
             self.notify("A download is already running.", severity="warning")
             return
@@ -213,6 +221,17 @@ class MainScreen(Screen[None]):
             quality=str(quality),
             download_dir=self.app.config.download_dir,
         )
+
+        if current_platform() == "windows":
+            need_ytdlp = not detect_ytdlp().available
+            need_ffmpeg = request.output_format in {"mp3", "m4a", "ogg", "mp4", "webm"} and not detect_ffmpeg().available
+            if need_ytdlp or need_ffmpeg:
+                self.dependency_install_in_progress = True
+                self._set_status_text("Installing missing dependencies. Try again after installation.", "warning")
+                self.notify("Installing missing dependencies. Try again after installation.", severity="warning")
+                self._update_action_visibility()
+                self._install_missing_dependencies(need_ytdlp, need_ffmpeg)
+                return
 
         errors = validate_download_request(request)
         if errors:
@@ -257,6 +276,21 @@ class MainScreen(Screen[None]):
     def _run_download(self, request: DownloadRequest) -> None:
         result = run_download(request, self.cancel_event, self._emit_live_output)
         self.app.call_from_thread(self._apply_download_result, result)
+
+    @work(thread=True)
+    def _install_missing_dependencies(self, need_ytdlp: bool, need_ffmpeg: bool) -> None:
+        try:
+            if need_ytdlp:
+                self.app.call_from_thread(self._set_status_text, "Installing managed yt-dlp...", "warning")
+                install_managed_ytdlp()
+            if need_ffmpeg:
+                self.app.call_from_thread(self._set_status_text, "Installing managed ffmpeg...", "warning")
+                install_managed_ffmpeg()
+        except Exception as exc:
+            self.app.call_from_thread(self._finish_dependency_install, False, str(exc))
+            return
+
+        self.app.call_from_thread(self._finish_dependency_install, True, None)
 
     def _emit_live_output(self, line: str) -> None:
         self.app.call_from_thread(self._append_log_line, line)
@@ -332,8 +366,9 @@ class MainScreen(Screen[None]):
 
     def _update_action_visibility(self) -> None:
         self.query_one("#download_button", Button).display = not self.download_in_progress
+        self.query_one("#download_button", Button).disabled = self.dependency_install_in_progress
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
-        self.query_one("#clear_input_button", Button).disabled = self.download_in_progress
+        self.query_one("#clear_input_button", Button).disabled = self.download_in_progress or self.dependency_install_in_progress
         self.query_one("#copy_log_button", Button).display = bool(self.log_lines)
         has_log = self.download_in_progress or bool(self.log_lines)
         self.query_one("#download_progress", ProgressBar).display = self.download_in_progress and not self.postprocess_active
@@ -388,6 +423,11 @@ class MainScreen(Screen[None]):
             status_widget.set_class(True, "status-error")
 
     def request_quit(self) -> bool:
+        if self.dependency_install_in_progress:
+            self._set_status_text("Wait for dependency installation to finish before exiting.", "warning")
+            self.notify("Wait for dependency installation to finish before exiting.", severity="warning")
+            return False
+
         if not self.download_in_progress or self.cancel_event is None:
             return True
 
@@ -398,6 +438,18 @@ class MainScreen(Screen[None]):
         self.notify("Cancelling active download before exit...", severity="warning")
         self._update_action_visibility()
         return False
+
+    def _finish_dependency_install(self, success: bool, error: str | None) -> None:
+        self.dependency_install_in_progress = False
+        self.app.refresh_dependency_statuses()
+        self._refresh_status()
+        self._update_action_visibility()
+        if success:
+            self._set_status_text("Dependencies installed. Try the download again.", "success")
+            self.notify("Dependencies installed. Try the download again.")
+        else:
+            self._set_status_text(f"Dependency install failed: {error}", "error")
+            self.notify(f"Dependency install failed: {error}", severity="error")
 
     @classmethod
     def _extract_progress(cls, line: str) -> float | None:

@@ -1,4 +1,5 @@
 import platform
+import sys
 from pathlib import Path
 
 
@@ -37,5 +38,18 @@ def data_dir() -> Path:
     return home / ".local" / "share" / APP_DIR_NAME
 
 
+def runtime_root_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    project_root = Path(__file__).resolve().parents[3]
+    if (project_root / "pyproject.toml").exists():
+        return project_root
+    return Path.cwd()
+
+
 def managed_bin_dir() -> Path:
+    system = platform.system().lower()
+    if system.startswith("windows"):
+        return runtime_root_dir() / "bin"
     return data_dir() / "bin"
