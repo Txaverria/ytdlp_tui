@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
@@ -7,7 +5,7 @@ from textual.widgets import Button, Footer, Header, Input, Static
 
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
 from ytdlp_tui.core.dependencies import install_managed_ffmpeg, install_managed_ytdlp
-from ytdlp_tui.core.platform import current_platform, dependency_policy_for_current_platform, open_in_file_manager
+from ytdlp_tui.core.platform import current_platform, dependency_policy_for_current_platform
 
 
 class SettingsScreen(Screen[None]):
@@ -35,7 +33,7 @@ class SettingsScreen(Screen[None]):
             Static("", classes="spacer"),
             Horizontal(
                 Button("Save", id="save_settings_button", variant="primary"),
-                Button("Open Download Folder", id="open_download_dir_button"),
+                Button("Set Default Downloads Folder", id="set_default_download_dir_button"),
                 classes="actions",
             ),
             Static("", classes="spacer"),
@@ -61,8 +59,8 @@ class SettingsScreen(Screen[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "save_settings_button":
             self._save_settings()
-        elif event.button.id == "open_download_dir_button":
-            self._open_download_dir()
+        elif event.button.id == "set_default_download_dir_button":
+            self._set_default_download_dir()
         elif event.button.id == "install_ytdlp_button":
             self._install_ytdlp()
         elif event.button.id == "install_ffmpeg_button":
@@ -95,16 +93,9 @@ class SettingsScreen(Screen[None]):
         app.refresh_dependency_statuses()
         self.notify("Settings saved.")
 
-    def _open_download_dir(self) -> None:
-        download_dir = self.query_one("#download_dir_input", Input).value.strip() or get_default_downloads_dir()
-        path = Path(download_dir).expanduser()
-        path.mkdir(parents=True, exist_ok=True)
-
-        try:
-            open_in_file_manager(path)
-            self.notify("Opened download folder in the system file manager.")
-        except Exception as exc:
-            self.notify(f"Could not open folder: {exc}", severity="error")
+    def _set_default_download_dir(self) -> None:
+        self.query_one("#download_dir_input", Input).value = get_default_downloads_dir()
+        self.notify("Default Downloads folder restored.")
 
     @work(thread=True)
     def _install_ytdlp(self) -> None:
