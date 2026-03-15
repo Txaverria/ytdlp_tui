@@ -4,7 +4,7 @@
 [![Textual](https://img.shields.io/badge/UI-Textual-5A2FC2)](https://textual.textualize.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/Txaverria/ytdlp_tui/release.yml?label=build)](https://github.com/Txaverria/ytdlp_tui/actions/workflows/release.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Txaverria/ytdlp_tui/releases)
+[![Release](https://img.shields.io/github/v/release/Txaverria/ytdlp_tui)](https://github.com/Txaverria/ytdlp_tui/releases)
 
 ![ytdlp-tui screenshot](docs/assets/screenshot.png)
 
