@@ -190,10 +190,39 @@ def _build_summary(
         return "[OK] Finished successfully."
 
     if error:
+        yt_error = _build_youtube_helpful_error(output_lines)
+        if yt_error:
+            return yt_error
         return error
 
     error_line = _last_matching_line(output_lines, "ERROR:")
     if error_line:
+        yt_error = _build_youtube_helpful_error(output_lines)
+        if yt_error:
+            return yt_error
         return error_line
 
     return "Download failed."
+
+
+def _build_youtube_helpful_error(output_lines: list[str]) -> str | None:
+    has_js_runtime_warning = any(
+        "No supported JavaScript runtime could be found" in line for line in output_lines
+    )
+    has_bot_confirmation_error = any(
+        "Sign in to confirm you’re not a bot" in line for line in output_lines
+    )
+
+    if has_js_runtime_warning and has_bot_confirmation_error:
+        return (
+            "YouTube blocked this request. Install Deno and try again. "
+            "If it still fails, use browser cookies with yt-dlp."
+        )
+
+    if has_js_runtime_warning:
+        return "YouTube may require a JavaScript runtime. Install Deno and try again."
+
+    if has_bot_confirmation_error:
+        return "YouTube blocked this request. Try again with browser cookies in yt-dlp."
+
+    return None
