@@ -1,6 +1,11 @@
+param(
+    [switch]$Relaunched
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 Clear-Host
+$shouldPause = $Relaunched
 
 $AppName = "ytdlp-tui"
 $RepoOwner = "Txaverria"
@@ -83,6 +88,48 @@ function Copy-AppBundle {
     Copy-Item (Join-Path $SourceDir "*") $DestinationDir -Recurse -Force
 }
 
+function Assert-AppNotRunning {
+    $running = Get-Process -Name $AppName -ErrorAction SilentlyContinue
+    if ($running) {
+        throw "$AppName.exe is still running. Close the app before updating."
+    }
+}
+
+function Replace-AppBundle {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceDir,
+        [Parameter(Mandatory = $true)][string]$DestinationDir
+    )
+
+    Assert-SafeAppDirectory -Path $DestinationDir
+
+    $backupDir = "$DestinationDir.old"
+    if (Test-Path $backupDir) {
+        Remove-Item $backupDir -Recurse -Force
+    }
+
+    if (Test-Path $DestinationDir) {
+        try {
+            Rename-Item -Path $DestinationDir -NewName (Split-Path -Path $backupDir -Leaf)
+        } catch {
+            throw "The install folder is in use. Close the app and any Explorer or terminal windows open in that folder, then try again."
+        }
+    }
+
+    try {
+        Copy-AppBundle -SourceDir $SourceDir -DestinationDir $DestinationDir
+        if (Test-Path $backupDir) {
+            Remove-Item $backupDir -Recurse -Force
+        }
+    } catch {
+        if ((-not (Test-Path $DestinationDir)) -and (Test-Path $backupDir)) {
+            Rename-Item -Path $backupDir -NewName (Split-Path -Path $DestinationDir -Leaf)
+        }
+        throw
+    }
+}
+
+$currentScriptPath = if ($PSCommandPath) { [System.IO.Path]::GetFullPath($PSCommandPath) } else { "" }
 $tempRoot = $null
 try {
     $metadata = Load-Metadata
@@ -90,6 +137,30 @@ try {
     $currentVersion = $metadata.version
     $UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
     Assert-SafeAppDirectory -Path $installDir
+
+    $normalizedInstallDir = [System.IO.Path]::GetFullPath($installDir)
+    $runningFromInstallDir = $false
+    if ($currentScriptPath) {
+        $scriptDirectory = Split-Path -Path $currentScriptPath -Parent
+        $runningFromInstallDir = $scriptDirectory.StartsWith($normalizedInstallDir, [System.StringComparison]::OrdinalIgnoreCase)
+    }
+
+    if (-not $Relaunched -and $runningFromInstallDir) {
+        $tempScript = Join-Path $env:TEMP "$AppName-updater-$([guid]::NewGuid().ToString('N')).ps1"
+        Copy-Item $currentScriptPath $tempScript -Force
+        Write-Step "Restarting updater from a temporary location..."
+        Start-Process powershell.exe `
+            -WorkingDirectory $env:TEMP `
+            -ArgumentList @(
+                "-ExecutionPolicy", "Bypass",
+                "-File", $tempScript,
+                "-Relaunched"
+            ) | Out-Null
+        exit 0
+    }
+
+    Set-Location $env:TEMP
+    Assert-AppNotRunning
 
     Write-Host ""
     Write-Host "Installed version: $currentVersion"
@@ -134,7 +205,7 @@ try {
 
     $sourceDir = $exePath.DirectoryName
     Write-Step "Updating installed app..."
-    Copy-AppBundle -SourceDir $sourceDir -DestinationDir $installDir
+    Replace-AppBundle -SourceDir $sourceDir -DestinationDir $installDir
 
     Write-Step "Refreshing installed scripts..."
     Invoke-WebRequest -Uri (Get-ScriptUrl -Version $asset.Version -ScriptName "uninstall-ytdlp-tui.ps1") -OutFile $UninstallScriptInstalled
@@ -155,6 +226,8 @@ try {
     if ($tempRoot -and (Test-Path $tempRoot)) {
         Remove-Item $tempRoot -Recurse -Force
     }
-    Write-Host ""
-    Read-Host "Press Enter to close"
+    if ($shouldPause) {
+        Write-Host ""
+        Read-Host "Press Enter to close"
+    }
 }
