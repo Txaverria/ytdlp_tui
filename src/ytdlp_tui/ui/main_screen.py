@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 class MainScreen(Screen[None]):
     BINDINGS = [("s", "settings", "Settings"), ("ctrl+q", "quit_app", "Quit")]
     recent_files: list[str] = []
+    log_lines: list[str] = []
     last_request: DownloadRequest | None = None
     cancel_event: threading.Event | None = None
     download_in_progress: bool = False
@@ -205,6 +206,7 @@ class MainScreen(Screen[None]):
         self.last_request = request
         self.cancel_event = threading.Event()
         self.download_in_progress = True
+        self.log_lines = []
         status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
         self.query_one("#log_text", Static).update("")
         self.query_one("#recent_files_text", Static).update("")
@@ -233,8 +235,25 @@ class MainScreen(Screen[None]):
 
     @work(thread=True)
     def _run_download(self, request: DownloadRequest) -> None:
-        result = run_download(request, self.cancel_event)
+        result = run_download(request, self.cancel_event, self._emit_live_output)
         self.app.call_from_thread(self._apply_download_result, result)
+
+    def _emit_live_output(self, line: str) -> None:
+        self.app.call_from_thread(self._append_log_line, line)
+
+    def _append_log_line(self, line: str) -> None:
+        self.log_lines.append(line)
+        self.log_lines = self.log_lines[-20:]
+
+        status_widget = self.query_one("#status_text", Static)
+        if line.startswith("[download]"):
+            status_widget.update(line)
+
+        header = "Activity:"
+        if self.log_lines and self.log_lines[-1].startswith("[download]"):
+            header = f"Latest progress: {self.log_lines[-1]}\n\nActivity:"
+
+        self.query_one("#log_text", Static).update(header + "\n" + "\n".join(self.log_lines))
 
     def _apply_download_result(self, result: DownloadResult) -> None:
         status_widget = self.query_one("#status_text", Static)
@@ -263,9 +282,9 @@ class MainScreen(Screen[None]):
 
         if result.output:
             tail = result.output[-20:]
-            header = "Log:"
+            header = "Activity:"
             if result.progress_line:
-                header = f"Latest progress: {result.progress_line}\n\nLog:"
+                header = f"Latest progress: {result.progress_line}\n\nActivity:"
             log_widget.update(header + "\n" + "\n".join(tail))
         else:
             log_widget.update("")

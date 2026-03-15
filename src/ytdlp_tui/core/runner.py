@@ -4,12 +4,17 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from typing import Callable
 
 from ytdlp_tui.core.dependencies import detect_ffmpeg, detect_ytdlp
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
 
 
-def run_download(request: DownloadRequest, cancel_event: threading.Event | None = None) -> DownloadResult:
+def run_download(
+    request: DownloadRequest,
+    cancel_event: threading.Event | None = None,
+    output_callback: Callable[[str], None] | None = None,
+) -> DownloadResult:
     ytdlp = detect_ytdlp()
     if not ytdlp.available or not ytdlp.path:
         return DownloadResult(
@@ -54,6 +59,8 @@ def run_download(request: DownloadRequest, cancel_event: threading.Event | None 
         line = raw_line.strip()
         if line:
             output_lines.append(line)
+            if output_callback is not None:
+                output_callback(line)
 
         if cancel_event and cancel_event.is_set():
             cancelled = True
