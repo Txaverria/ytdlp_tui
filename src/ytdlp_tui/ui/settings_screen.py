@@ -51,8 +51,7 @@ class SettingsScreen(Screen[None]):
             Static(f"ffmpeg policy: {policy.ffmpeg}", id="ffmpeg_policy", classes="note"),
             Static(self._dependency_detail(app.ffmpeg_status), id="ffmpeg_detail", classes="note"),
             Static("", classes="spacer"),
-            Button("Install or Update ffmpeg", id="install_ffmpeg_button"),
-            ProgressBar(total=100, show_eta=False, show_percentage=False, id="ffmpeg_progress"),
+            *self._ffmpeg_install_widgets(),
             Static("", classes="spacer"),
             Static("YouTube Runtime", classes="title"),
             Static(self._deno_detail(app.deno_status), id="deno_detail", classes="note"),
@@ -205,3 +204,12 @@ class SettingsScreen(Screen[None]):
         if not match:
             return None
         return float(match.group(1))
+
+    @staticmethod
+    def _ffmpeg_install_widgets() -> tuple[Static | Button | ProgressBar, ...]:
+        if current_platform() == "windows":
+            return (
+                Button("Install or Update ffmpeg", id="install_ffmpeg_button"),
+                ProgressBar(total=100, show_eta=False, show_percentage=False, id="ffmpeg_progress"),
+            )
+        return (Static("Managed ffmpeg install is only available on Windows.", classes="note"),)
