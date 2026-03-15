@@ -3,11 +3,10 @@ $ErrorActionPreference = "Stop"
 
 $AppName = "ytdlp-tui"
 $RepoOwner = "Txaverria"
-$RepoName = "ytdlp-tui"
+$RepoName = "ytdlp_tui"
 $AssetName = "ytdlp-tui-windows-amd64.zip"
 $InstallerStateDir = Join-Path $env:LOCALAPPDATA "ytdlp-tui-installer"
 $MetadataPath = Join-Path $InstallerStateDir "install.json"
-$UninstallScriptSource = Join-Path $PSScriptRoot "uninstall-ytdlp-tui.ps1"
 $UninstallScriptInstalled = Join-Path $InstallerStateDir "uninstall-ytdlp-tui.ps1"
 
 function Write-Step {
@@ -29,6 +28,14 @@ function Get-LatestReleaseAsset {
         Version = $release.tag_name
         Url = $asset.browser_download_url
     }
+}
+
+function Get-UninstallScriptUrl {
+    param(
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    return "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Version/scripts/windows/uninstall-ytdlp-tui.ps1"
 }
 
 function Select-InstallDirectory {
@@ -125,10 +132,9 @@ try {
     Write-Step "Installing to $installDir"
     Copy-AppBundle -SourceDir $sourceDir -DestinationDir $installDir
 
-    if (-not (Test-Path $UninstallScriptSource)) {
-        throw "Could not find uninstall script next to the installer."
-    }
-    Copy-Item $UninstallScriptSource $UninstallScriptInstalled -Force
+    $uninstallScriptUrl = Get-UninstallScriptUrl -Version $asset.Version
+    Write-Step "Downloading uninstall script..."
+    Invoke-WebRequest -Uri $uninstallScriptUrl -OutFile $UninstallScriptInstalled
 
     New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
     New-Shortcut -ShortcutPath $appShortcut -TargetPath (Join-Path $installDir "$AppName.exe") -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")

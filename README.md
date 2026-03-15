@@ -3,8 +3,8 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Textual](https://img.shields.io/badge/UI-Textual-5A2FC2)](https://textual.textualize.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/Txaverria/ytdlp-tui/release.yml?label=build)](https://github.com/Txaverria/ytdlp-tui/actions/workflows/release.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Txaverria/ytdlp-tui/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/Txaverria/ytdlp_tui/release.yml?label=build)](https://github.com/Txaverria/ytdlp_tui/actions/workflows/release.yml)
+[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Txaverria/ytdlp_tui/releases)
 
 ![ytdlp-tui screenshot](docs/assets/screenshot.png)
 
@@ -24,12 +24,12 @@ Cross-platform terminal UI for `yt-dlp`, built with Python and Textual.
 
 ## Quick Install
 
-Prebuilt releases are available on the [GitHub Releases](https://github.com/Txaverria/ytdlp-tui/releases) page.
+Prebuilt releases are available on the [GitHub Releases](https://github.com/Txaverria/ytdlp_tui/releases) page.
 
 On Windows PowerShell, you can run the installer script directly:
 
 ```powershell
-irm https://raw.githubusercontent.com/Txaverria/ytdlp-tui/main/scripts/windows/install-ytdlp-tui.ps1 | iex
+irm https://raw.githubusercontent.com/Txaverria/ytdlp_tui/main/scripts/windows/install-ytdlp-tui.ps1 | iex
 ```
 
 The installer downloads the latest Windows release, installs the app, and creates Start Menu shortcuts. It can install to:
@@ -38,6 +38,15 @@ The installer downloads the latest Windows release, installs the app, and create
 - `Program Files`
 - a custom folder
 - the current folder
+
+To uninstall on Windows:
+
+- use the `Uninstall ytdlp-tui` shortcut from the Start Menu, or
+- run the installed uninstaller directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\ytdlp-tui-installer\uninstall-ytdlp-tui.ps1"
+```
 
 ## Features
 
@@ -70,7 +79,7 @@ If you only want the packaged Windows app, use the installer above or download t
 Clone and run locally:
 
 ```bash
-git clone https://github.com/Txaverria/ytdlp-tui.git
+git clone https://github.com/Txaverria/ytdlp_tui.git
 cd ytdlp-tui
 python -m venv .venv
 source .venv/bin/activate
@@ -81,7 +90,7 @@ python -m ytdlp_tui
 On Windows PowerShell:
 
 ```powershell
-git clone https://github.com/Txaverria/ytdlp-tui.git
+git clone https://github.com/Txaverria/ytdlp_tui.git
 cd ytdlp-tui
 python -m venv .venv
 .venv\Scripts\Activate.ps1
