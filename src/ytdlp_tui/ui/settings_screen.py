@@ -1,8 +1,10 @@
+from pathlib import Path
+
+import re
 from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, ProgressBar, Static
-import re
 
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
 from ytdlp_tui.core.dependencies import install_managed_ffmpeg, install_managed_ytdlp
@@ -89,13 +91,30 @@ class SettingsScreen(Screen[None]):
             return
 
         path = Path(download_dir).expanduser()
-        path.mkdir(parents=True, exist_ok=True)
+        if path.exists() and not path.is_dir():
+            self.notify("Download path must be a directory.", severity="error")
+            return
+
+        if not path.exists():
+            parent = path.parent
+            if not parent.exists():
+                self.notify("Parent directory does not exist.", severity="error")
+                return
+            try:
+                path.mkdir(parents=False, exist_ok=True)
+            except PermissionError:
+                self.notify("Permission denied for that download directory.", severity="error")
+                return
+            except OSError as exc:
+                self.notify(f"Could not create download directory: {exc}", severity="error")
+                return
 
         app.update_config(
             AppConfig(
                 download_dir=str(path),
                 output_format=app.config.output_format,
                 quality=app.config.quality,
+                theme=app.config.theme,
             )
         )
         app.refresh_dependency_statuses()
