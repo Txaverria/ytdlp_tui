@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from typing import Any
 
 from ytdlp_tui.core.paths import config_file_path
 from ytdlp_tui.core.platform import get_default_downloads_dir
@@ -12,6 +13,7 @@ class AppConfig:
     download_dir: str
     output_format: str
     quality: str
+    theme: str | None = None
 
 
 def default_config() -> AppConfig:
@@ -19,6 +21,7 @@ def default_config() -> AppConfig:
         download_dir=get_default_downloads_dir(),
         output_format="mp4",
         quality="high",
+        theme=None,
     )
 
 
@@ -27,12 +30,13 @@ def load_config() -> AppConfig:
     if not path.exists():
         return default_config()
 
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     defaults = default_config()
     return AppConfig(
         download_dir=data.get("download_dir", defaults.download_dir),
         output_format=data.get("output_format", defaults.output_format),
         quality=data.get("quality", defaults.quality),
+        theme=data.get("theme", defaults.theme),
     )
 
 

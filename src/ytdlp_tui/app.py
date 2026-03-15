@@ -217,6 +217,8 @@ class YtDlpTuiApp(App[None]):
 
     def on_mount(self) -> None:
         self.config = load_config()
+        if self.config.theme:
+            self.theme = self.config.theme
         self.refresh_dependency_statuses()
         self.theme_changed_signal.subscribe(self, self._refresh_theme_dependent_widgets)
         self.push_screen(MainScreen())
@@ -236,6 +238,9 @@ class YtDlpTuiApp(App[None]):
         self.deno_status = detect_deno()
 
     def _refresh_theme_dependent_widgets(self, _theme) -> None:
+        if self.config.theme != self.theme:
+            self.config.theme = self.theme
+            save_config(self.config)
         for screen in self.screen_stack:
             refresh_for_theme = getattr(screen, "refresh_for_theme", None)
             if callable(refresh_for_theme):
