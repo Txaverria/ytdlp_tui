@@ -173,21 +173,21 @@ def _build_summary(
         if downloaded_files:
             file_count = len(downloaded_files)
             file_label = "file" if file_count == 1 else "files"
-            return f"Finished successfully. {file_count} {file_label} ready."
+            return f"[OK] Finished successfully. {file_count} {file_label} ready."
 
         destination_line = _last_matching_line(output_lines, "[Merger] Merging formats into ")
         if destination_line:
-            return "Finished successfully after merging formats."
+            return "[OK] Finished successfully after merging formats."
 
         destination_line = _last_matching_line(output_lines, "[ExtractAudio] Destination: ")
         if destination_line:
-            return "Finished successfully after audio extraction."
+            return "[OK] Finished successfully after audio extraction."
 
         destination_line = _last_matching_line(output_lines, "[download] Destination: ")
         if destination_line:
-            return "Finished successfully."
+            return "[OK] Finished successfully."
 
-        return "Finished successfully."
+        return "[OK] Finished successfully."
 
     if error:
         return error
