@@ -30,12 +30,11 @@ class MainScreen(Screen[None]):
     def _build_hero(compact: bool) -> Text:
         if compact:
             raw = (
-                "                                                     \n"
-                "                                                     \n"
-                "██  ██ ██████ ████▄  ██     █████▄         ██  ██ ██ \n"
-                " ▀██▀    ██   ██  ██ ██     ██▄▄█▀   ▄▄▄   ██  ██ ██ \n"
-                "  ██     ██   ████▀  ██████ ██             ▀████▀ ██ \n"
-                "                                                     \n"
+                "██    ██ ████████ ██████  ██      ██████        ████████ ██    ██ ██ \n"
+                " ██  ██     ██    ██   ██ ██      ██   ██          ██    ██    ██ ██ \n"
+                "  ████      ██    ██   ██ ██      ██████  █████    ██    ██    ██ ██ \n"
+                "   ██       ██    ██   ██ ██      ██               ██    ██    ██ ██ \n"
+                "   ██       ██    ██████  ███████ ██               ██     ██████  ██ \n"
             )
         else:
             raw = (
@@ -67,6 +66,7 @@ class MainScreen(Screen[None]):
             Static("", classes="spacer"),
             Static(self._build_hero(False), classes="hero", id="hero_text"),
             Static("", id="status_meta", classes="muted"),
+            Static("", classes="spacer"),
             Static("Ready.", id="status_text", classes="muted"),
             Static("", classes="spacer"),
             Vertical(

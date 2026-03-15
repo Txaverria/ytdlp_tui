@@ -165,19 +165,9 @@ class YtDlpTuiApp(App[None]):
         height: auto;
     }
 
-    .compact-layout #primary_row,
-    .compact-layout #secondary_row {
-        layout: vertical;
-        height: auto;
-    }
-
-    .compact-layout #input_row #input_group,
-    .compact-layout #secondary_row Select,
-    .compact-layout #secondary_row Button,
-    .compact-layout #primary_row Button {
+    .compact-layout #input_row #input_group {
         width: 1fr;
         margin-right: 0;
-        margin-bottom: 1;
     }
     """
 
