@@ -1,5 +1,14 @@
+from textual import events
 from textual.widget import Widget
 from textual.widgets import Input
+
+
+class PasteFriendlyInput(Input):
+    def _on_paste(self, event: events.Paste) -> None:
+        if event.text:
+            flattened = " ".join(part.strip() for part in event.text.splitlines() if part.strip())
+            self.insert_text_at_cursor(flattened)
+        event.stop()
 
 
 class UrlInput(Widget):
@@ -15,7 +24,7 @@ class UrlInput(Widget):
     """
 
     def compose(self):
-        yield Input(
+        yield PasteFriendlyInput(
             placeholder="URL or search term, separated by spaces, commas, semicolons, or newlines",
             id="download_input",
         )

@@ -98,16 +98,13 @@ class MainScreen(Screen[None]):
                 ),
                 classes="main-toolbar",
             ),
-            Vertical(
-                Horizontal(
-                    Button("Open Latest File", id="open_latest_file_button"),
-                    Button("Open Latest File Folder", id="open_latest_file_folder_button"),
-                    id="recent_actions",
-                ),
-                Static("", id="recent_files_text", classes="note"),
-                id="recent_result",
+            Horizontal(
+                Button("Open Latest File", id="open_latest_file_button"),
+                Button("Open Latest File Folder", id="open_latest_file_folder_button"),
+                id="recent_actions",
             ),
-            Static("", id="log_text", classes="note",),
+            Static("", id="recent_files_text", classes="note",),
+            Static("", id="log_text", classes="note"),
             id="main_panel",
         )
         yield Footer()
@@ -296,7 +293,18 @@ class MainScreen(Screen[None]):
     def _update_action_visibility(self) -> None:
         self.query_one("#download_button", Button).display = not self.download_in_progress
         self.query_one("#cancel_download_button", Button).display = self.download_in_progress
-        self.query_one("#recent_result", Vertical).display = bool(self.recent_files)
+        has_recent = bool(self.recent_files)
+        self.query_one("#recent_actions", Horizontal).display = has_recent
+        self.query_one("#recent_files_text", Static).display = has_recent
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id != "download_input":
+            return
+
+        value = event.value
+        normalized = value.replace("\r", " ").replace("\n", " ")
+        if normalized != value:
+            event.input.value = normalized
 
     def _update_layout_mode(self) -> None:
         width = self.app.size.width
