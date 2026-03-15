@@ -339,7 +339,7 @@ class MainScreen(Screen[None]):
             self.notify("Download finished.")
         else:
             self._set_status_text(result.summary or result.error or "Download failed.", "error")
-            self.notify(result.error or "Download failed.", severity="error")
+            self.notify(result.summary or result.error or "Download failed.", severity="error")
 
         if result.success:
             self.query_one("#download_progress", ProgressBar).update(progress=100)
