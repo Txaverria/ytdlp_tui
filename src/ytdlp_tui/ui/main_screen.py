@@ -11,6 +11,7 @@ from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
 from ytdlp_tui.core.platform import open_in_file_manager
 from ytdlp_tui.core.runner import run_download
+from ytdlp_tui.ui.widgets.url_input import UrlInput
 
 if TYPE_CHECKING:
     from ytdlp_tui.app import YtDlpTuiApp
@@ -32,7 +33,7 @@ class MainScreen(Screen[None]):
             Static("Paste one or more URLs or search terms to begin.", classes="subtitle"),
             Vertical(
                 Horizontal(
-                    Input(placeholder="URL or search term", id="download_input"),
+                    UrlInput(id="input_group"),
                     Select(
                         [
                             ("MP3", "mp3"),
@@ -142,7 +143,9 @@ class MainScreen(Screen[None]):
         self.app.exit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id in {"settings_button", "settings_button_compact"}:
+        if event.button.id == "clear_input_button":
+            self._clear_input()
+        elif event.button.id in {"settings_button", "settings_button_compact"}:
             self.action_settings()
         elif event.button.id in {"open_folder_button", "open_folder_button_compact"}:
             self._open_download_dir()
@@ -166,6 +169,9 @@ class MainScreen(Screen[None]):
         except Exception as exc:
             self.notify(f"Could not open folder: {exc}", severity="error")
 
+    def _clear_input(self) -> None:
+        self.query_one("#input_group", UrlInput).clear()
+
     def on_screen_resume(self) -> None:
         app = self.app
         app.refresh_dependency_statuses()
@@ -179,7 +185,7 @@ class MainScreen(Screen[None]):
             self.notify("A download is already running.", severity="warning")
             return
 
-        raw_input = self.query_one("#download_input", Input).value
+        raw_input = self.query_one("#input_group", UrlInput).input.value
         output_format = self.query_one("#format_select", Select).value
         quality = self.query_one("#quality_select", Select).value
         request = DownloadRequest(

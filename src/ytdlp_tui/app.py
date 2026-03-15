@@ -104,17 +104,18 @@ class YtDlpTuiApp(App[None]):
         margin: 0 0 1 0;
     }
 
-    #source_row Input {
-        width: 70%;
+    #input_group {
+        width: 1fr;
         margin-right: 1;
     }
 
-    #source_row Select {
-        width: 15%;
+    #format_select,
+    #quality_select {
+        width: 25;
         margin-right: 1;
     }
 
-    #source_row Select:last-of-type {
+    #quality_select {
         margin-right: 0;
     }
 
@@ -170,8 +171,9 @@ class YtDlpTuiApp(App[None]):
         layout: vertical;
     }
 
-    .compact-layout #source_row Input,
-    .compact-layout #source_row Select {
+    .compact-layout #input_group,
+    .compact-layout #format_select,
+    .compact-layout #quality_select {
         width: 1fr;
         margin-right: 0;
     }
