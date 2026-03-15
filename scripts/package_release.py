@@ -14,24 +14,18 @@ BUILD_DIR = ROOT / "build"
 ENTRYPOINT = ROOT / "src" / "ytdlp_tui" / "__main__.py"
 APP_NAME = "ytdlp-tui"
 ICON_PATH = ROOT / "assets" / "icon.ico"
+UPDATER_ENTRYPOINT = ROOT / "src" / "ytdlp_tui" / "windows_update.py"
+UNINSTALLER_ENTRYPOINT = ROOT / "src" / "ytdlp_tui" / "windows_uninstall.py"
+UPDATER_NAME = "ytdlp-tui-updater"
+UNINSTALLER_NAME = "ytdlp-tui-uninstaller"
 
 
 def main() -> None:
     system = normalized_system()
-    pyinstaller_cmd = [
-        "pyinstaller",
-        "--noconfirm",
-        "--clean",
-        "--console",
-        "--name",
-        APP_NAME,
-        "--paths",
-        str(ROOT / "src"),
-        str(ENTRYPOINT),
-    ]
-    if ICON_PATH.exists():
-        pyinstaller_cmd.extend(["--icon", str(ICON_PATH)])
-    subprocess.run(pyinstaller_cmd, check=True, cwd=ROOT)
+    build_target(APP_NAME, ENTRYPOINT, onefile=False)
+    if system == "windows":
+        build_target(UPDATER_NAME, UPDATER_ENTRYPOINT, onefile=True)
+        build_target(UNINSTALLER_NAME, UNINSTALLER_ENTRYPOINT, onefile=True)
 
     bundle_dir = DIST_DIR / bundle_name(system)
     if bundle_dir.exists():
@@ -40,6 +34,9 @@ def main() -> None:
 
     source_dir = DIST_DIR / APP_NAME
     shutil.copytree(source_dir, bundle_dir / APP_NAME, dirs_exist_ok=True)
+    if system == "windows":
+        shutil.copy2(DIST_DIR / f"{UPDATER_NAME}.exe", bundle_dir / APP_NAME / f"{UPDATER_NAME}.exe")
+        shutil.copy2(DIST_DIR / f"{UNINSTALLER_NAME}.exe", bundle_dir / APP_NAME / f"{UNINSTALLER_NAME}.exe")
     shutil.copy2(ROOT / "README.md", bundle_dir / "README.md")
 
     archive_path = create_archive(bundle_dir, system)
@@ -58,6 +55,25 @@ def normalized_system() -> str:
 def bundle_name(system: str) -> str:
     machine = platform.machine().lower()
     return f"{APP_NAME}-{system}-{machine}"
+
+
+def build_target(name: str, entrypoint: Path, *, onefile: bool) -> None:
+    pyinstaller_cmd = [
+        "pyinstaller",
+        "--noconfirm",
+        "--clean",
+        "--console",
+        "--name",
+        name,
+        "--paths",
+        str(ROOT / "src"),
+    ]
+    if onefile:
+        pyinstaller_cmd.append("--onefile")
+    if ICON_PATH.exists():
+        pyinstaller_cmd.extend(["--icon", str(ICON_PATH)])
+    pyinstaller_cmd.append(str(entrypoint))
+    subprocess.run(pyinstaller_cmd, check=True, cwd=ROOT)
 
 
 def create_archive(bundle_dir: Path, system: str) -> Path:

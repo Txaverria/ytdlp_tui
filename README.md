@@ -44,21 +44,13 @@ The installer shows the final destination and requires confirmation before repla
 To update on Windows:
 
 - use the `Update ytdlp-tui` shortcut from the Start Menu, or
-- run `update-ytdlp-tui.ps1` from the installed app folder, or
-- run the installed updater directly:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\ytdlp-tui-installer\update-ytdlp-tui.ps1"
-```
+- run `ytdlp-tui-updater.exe` from the installed app folder
 
 To uninstall on Windows:
 
 - use the `Uninstall ytdlp-tui` shortcut from the Start Menu, or
-- run the installed uninstaller directly:
+- run `ytdlp-tui-uninstaller.exe` from the installed app folder
 
-```powershell
-powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\ytdlp-tui-installer\uninstall-ytdlp-tui.ps1"
-```
 
 ## Features
 

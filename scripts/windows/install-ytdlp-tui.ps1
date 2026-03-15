@@ -8,8 +8,8 @@ $RepoName = "ytdlp_tui"
 $AssetName = "ytdlp-tui-windows-amd64.zip"
 $InstallerStateDir = Join-Path $env:LOCALAPPDATA "ytdlp-tui-installer"
 $MetadataPath = Join-Path $InstallerStateDir "install.json"
-$UninstallScriptInstalled = Join-Path $InstallerStateDir "uninstall-ytdlp-tui.ps1"
-$UpdateScriptInstalled = Join-Path $InstallerStateDir "update-ytdlp-tui.ps1"
+$UpdaterExeName = "ytdlp-tui-updater.exe"
+$UninstallerExeName = "ytdlp-tui-uninstaller.exe"
 
 function Write-Step {
     param([string]$Message)
@@ -51,14 +51,6 @@ function Get-LatestReleaseAsset {
         Version = $release.tag_name
         Url = $asset.browser_download_url
     }
-}
-
-function Get-UninstallScriptUrl {
-    param(
-        [Parameter(Mandatory = $true)][string]$Version
-    )
-
-    return "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Version/scripts/windows/uninstall-ytdlp-tui.ps1"
 }
 
 function Select-InstallDirectory {
@@ -191,19 +183,19 @@ try {
     Write-Step "Installing to $installDir"
     Copy-AppBundle -SourceDir $sourceDir -DestinationDir $installDir
 
-    $UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
-
-    $uninstallScriptUrl = Get-UninstallScriptUrl -Version $asset.Version
-    Write-Step "Downloading uninstall script..."
-    Invoke-WebRequest -Uri $uninstallScriptUrl -OutFile $UninstallScriptInstalled
-    Write-Step "Downloading update script..."
-    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$($asset.Version)/scripts/windows/update-ytdlp-tui.ps1" -OutFile $UpdateScriptInstalled
-    Copy-Item $UpdateScriptInstalled $UpdateScriptInAppDir -Force
+    $UpdaterExePath = Join-Path $installDir $UpdaterExeName
+    $UninstallerExePath = Join-Path $installDir $UninstallerExeName
+    if (-not (Test-Path $UpdaterExePath)) {
+        throw "Could not find $UpdaterExeName in the installed app bundle."
+    }
+    if (-not (Test-Path $UninstallerExePath)) {
+        throw "Could not find $UninstallerExeName in the installed app bundle."
+    }
 
     New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
     New-Shortcut -ShortcutPath $appShortcut -TargetPath (Join-Path $installDir "$AppName.exe") -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
-    New-Shortcut -ShortcutPath $updateShortcut -TargetPath "powershell.exe" -Arguments "-ExecutionPolicy Bypass -File `"$UpdateScriptInAppDir`"" -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
-    New-Shortcut -ShortcutPath $uninstallShortcut -TargetPath "powershell.exe" -Arguments "-ExecutionPolicy Bypass -File `"$UninstallScriptInstalled`"" -WorkingDirectory $InstallerStateDir -IconLocation (Join-Path $installDir "$AppName.exe")
+    New-Shortcut -ShortcutPath $updateShortcut -TargetPath $UpdaterExePath -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
+    New-Shortcut -ShortcutPath $uninstallShortcut -TargetPath $UninstallerExePath -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
 
     $metadata = [PSCustomObject]@{
         app_name = $AppName
@@ -213,9 +205,6 @@ try {
         app_shortcut = $appShortcut
         update_shortcut = $updateShortcut
         uninstall_shortcut = $uninstallShortcut
-        uninstall_script = $UninstallScriptInstalled
-        update_script = $UpdateScriptInstalled
-        update_script_app_dir = $UpdateScriptInAppDir
     }
     $metadata | ConvertTo-Json | Set-Content -Path $MetadataPath -Encoding UTF8
 
@@ -223,7 +212,8 @@ try {
     Write-Host ""
     Write-Host "Installed to: $installDir"
     Write-Host "Start Menu shortcut: $appShortcut"
-    Write-Host "Uninstall script: $UninstallScriptInstalled"
+    Write-Host "Updater: $UpdaterExePath"
+    Write-Host "Uninstaller: $UninstallerExePath"
     Write-Host ""
     Write-Host "Note: some YouTube downloads may require Deno."
     Write-Host "Windows PowerShell install command:"
