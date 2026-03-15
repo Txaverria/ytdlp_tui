@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class MainScreen(Screen[None]):
-    BINDINGS = [("s", "settings", "Settings"), ("q", "quit_app", "Quit")]
+    BINDINGS = [("s", "settings", "Settings"), ("ctrl+q", "quit_app", "Quit")]
     recent_files: list[str] = []
     last_request: DownloadRequest | None = None
     cancel_event: threading.Event | None = None
