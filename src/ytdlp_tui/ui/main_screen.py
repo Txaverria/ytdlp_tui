@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING
 
+from textual import work
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Select, Static
 
 from ytdlp_tui.core.downloads import validate_download_request
-from ytdlp_tui.core.models import DownloadRequest
+from ytdlp_tui.core.models import DownloadRequest, DownloadResult
 from ytdlp_tui.core.platform import open_in_file_manager
+from ytdlp_tui.core.runner import run_download
 
 if TYPE_CHECKING:
     from ytdlp_tui.app import YtDlpTuiApp
@@ -46,6 +48,8 @@ class MainScreen(Screen[None]):
                 classes="note",
             ),
             Static("", id="dependency_text", classes="note"),
+            Static("", id="recent_files_text", classes="note"),
+            Static("", id="log_text", classes="note"),
             id="main_panel",
         )
         yield Footer()
@@ -99,10 +103,10 @@ class MainScreen(Screen[None]):
             self.notify(errors[0], severity="error")
             return
 
-        status_widget.update(
-            "Validation passed. The next milestone will execute yt-dlp and stream progress here."
-        )
-        self.notify("Download request is valid.")
+        status_widget.update("Starting download...")
+        self.query_one("#log_text", Static).update("")
+        self.query_one("#recent_files_text", Static).update("")
+        self._run_download(request)
 
     def _refresh_status(self) -> None:
         app = self.app
@@ -124,3 +128,33 @@ class MainScreen(Screen[None]):
                 detail += f", {status.version}"
             return f"{name}: {detail}"
         return f"{name}: {status.message or 'missing'}"
+
+    @work(thread=True)
+    def _run_download(self, request: DownloadRequest) -> None:
+        result = run_download(request)
+        self.call_from_thread(self._apply_download_result, result)
+
+    def _apply_download_result(self, result: DownloadResult) -> None:
+        status_widget = self.query_one("#status_text", Static)
+        log_widget = self.query_one("#log_text", Static)
+        files_widget = self.query_one("#recent_files_text", Static)
+
+        if result.success:
+            status_widget.update("Download finished.")
+            self.notify("Download finished.")
+        else:
+            status_widget.update(result.error or "Download failed.")
+            self.notify(result.error or "Download failed.", severity="error")
+
+        if result.downloaded_files:
+            files_widget.update(
+                "Recent files:\n" + "\n".join(f"- {path}" for path in result.downloaded_files)
+            )
+        else:
+            files_widget.update("")
+
+        if result.output:
+            tail = result.output[-20:]
+            log_widget.update("Log:\n" + "\n".join(tail))
+        else:
+            log_widget.update("")

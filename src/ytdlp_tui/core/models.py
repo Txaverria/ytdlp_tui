@@ -18,3 +18,11 @@ class DependencyStatus:
     version: str | None = None
     path: str | None = None
     message: str | None = None
+
+
+@dataclass(slots=True)
+class DownloadResult:
+    success: bool
+    output: list[str]
+    downloaded_files: list[str]
+    error: str | None = None
