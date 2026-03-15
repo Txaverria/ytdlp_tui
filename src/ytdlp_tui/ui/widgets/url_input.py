@@ -1,6 +1,5 @@
-from textual.containers import Horizontal
 from textual.widget import Widget
-from textual.widgets import Button, Input
+from textual.widgets import Input
 
 
 class UrlInput(Widget):
@@ -10,30 +9,15 @@ class UrlInput(Widget):
         height: auto;
     }
 
-    UrlInput > Horizontal {
-        width: 1fr;
-        height: auto;
-    }
-
     UrlInput Input {
         width: 1fr;
-        margin-right: 1;
-    }
-
-    UrlInput Button {
-        width: 5;
-        min-width: 3;
-        height: 3;
-        padding: 0;
-        content-align: center middle;
-        margin-right: 0;
     }
     """
 
     def compose(self):
-        yield Horizontal(
-            Input(placeholder="URL or search term", id="download_input"),
-            Button("X", id="clear_input_button", variant="error"),
+        yield Input(
+            placeholder="URL or search term, separated by spaces, commas, semicolons, or newlines",
+            id="download_input",
         )
 
     @property

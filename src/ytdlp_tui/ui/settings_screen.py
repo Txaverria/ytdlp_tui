@@ -11,7 +11,7 @@ from ytdlp_tui.core.platform import dependency_policy_for_current_platform, open
 
 
 class SettingsScreen(Screen[None]):
-    BINDINGS = [("escape", "back", "Back")]
+    BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "quit_app", "Quit")]
 
     def compose(self):
         app = self.app
@@ -68,6 +68,9 @@ class SettingsScreen(Screen[None]):
 
     def action_back(self) -> None:
         self.app.pop_screen()
+
+    def action_quit_app(self) -> None:
+        self.app.exit()
 
     def _save_settings(self) -> None:
         app = self.app

@@ -9,7 +9,6 @@ from ytdlp_tui.ui.main_screen import MainScreen
 
 class YtDlpTuiApp(App[None]):
     TITLE = "ytdlp-tui"
-    SUB_TITLE = "Cross-platform terminal UI for yt-dlp"
     CSS = """
     Screen {
         layout: vertical;
@@ -37,10 +36,10 @@ class YtDlpTuiApp(App[None]):
         margin: 0 0 0 0;
     }
 
-    .section-title {
+    .hero {
+        color: #f4b860;
         text-style: bold;
-        color: #7dd3c7;
-        margin: 0 0 0 0;
+        margin: 0 0 1 0;
     }
 
     #main_panel, #settings_panel {
@@ -48,28 +47,13 @@ class YtDlpTuiApp(App[None]):
         height: 1fr;
         margin: 0 1;
         padding: 0 1;
-        border: round #35506b;
-        background: #13202c;
+        background: #10151c;
         overflow-y: auto;
     }
 
     .actions {
         height: auto;
         margin: 0 0;
-    }
-
-    .section-block {
-        margin: 0 0 0 0;
-        padding: 0 0 0 0;
-        border-bottom: solid #223243;
-    }
-
-    .status-box {
-        margin: 0 0 0 0;
-        padding: 0 1;
-        min-height: 1;
-        border: round #35506b;
-        background: #0d1721;
     }
 
     Button {
@@ -89,8 +73,12 @@ class YtDlpTuiApp(App[None]):
         color: #c7d3df;
     }
 
-    .status-note {
-        color: #f3efe6;
+    .muted {
+        color: #90a4b8;
+    }
+
+    .spacer {
+        height: 1;
     }
 
     .main-toolbar {
@@ -120,27 +108,8 @@ class YtDlpTuiApp(App[None]):
     }
 
     #main_columns {
-        layout: horizontal;
-        height: 1fr;
-    }
-
-    #main_left {
-        width: 45%;
-        min-width: 36;
-        height: 1fr;
-        margin-right: 1;
-    }
-
-    #main_right {
-        width: 55%;
-        height: 1fr;
-    }
-
-    .panel-surface {
-        height: 1fr;
-        padding: 0 1;
-        border: round #35506b;
-        background: #0d1721;
+        layout: vertical;
+        height: auto;
     }
 
     .tight-note {
@@ -151,62 +120,64 @@ class YtDlpTuiApp(App[None]):
         height: auto;
     }
 
-    .action-row {
+    #primary_row {
+        layout: horizontal;
         height: auto;
         margin: 0 0 1 0;
     }
 
-    #main_actions_wide,
-    #main_actions_compact_primary,
-    #main_actions_compact_secondary {
+    #input_row {
         height: auto;
+        margin: 0 0 1 0;
     }
 
-    #main_actions_compact_primary,
-    #main_actions_compact_secondary {
-        display: none;
-    }
-
-    .compact-layout #source_row {
-        layout: vertical;
-    }
-
-    .compact-layout #input_group,
-    .compact-layout #format_select,
-    .compact-layout #quality_select {
+    #input_row #input_group {
         width: 1fr;
         margin-right: 0;
     }
 
-    .compact-layout #main_actions_wide {
-        display: none;
+    #primary_download_button {
+        width: 12;
     }
 
-    .compact-layout #main_actions_compact_primary,
-    .compact-layout #main_actions_compact_secondary {
-        display: block;
-    }
-
-    .compact-layout #main_actions_compact_primary {
+    #secondary_row {
+        layout: horizontal;
+        height: auto;
         margin: 0 0 1 0;
     }
 
-    .compact-layout #main_columns {
+    #secondary_row Select {
+        width: 16;
+        margin-right: 1;
+    }
+
+    #secondary_settings_button {
+        width: 12;
+    }
+
+    #recent_result {
+        margin: 0 0 1 0;
+    }
+
+    #activity_log {
+        color: #c7d3df;
+        min-height: 12;
+        height: auto;
+    }
+
+    .compact-layout #primary_row,
+    .compact-layout #secondary_row {
         layout: vertical;
         height: auto;
     }
 
-    .compact-layout #main_left,
-    .compact-layout #main_right {
+    .compact-layout #input_row #input_group,
+    .compact-layout #secondary_row Select,
+    .compact-layout #secondary_row Button,
+    .compact-layout #primary_row Button {
         width: 1fr;
-        height: auto;
-        min-width: 0;
         margin-right: 0;
         margin-bottom: 1;
-    }
-
-    .compact-layout .panel-surface {
-        height: auto;
     }
     """
 
