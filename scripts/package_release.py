@@ -13,6 +13,7 @@ DIST_DIR = ROOT / "dist"
 BUILD_DIR = ROOT / "build"
 ENTRYPOINT = ROOT / "src" / "ytdlp_tui" / "__main__.py"
 APP_NAME = "ytdlp-tui"
+ICON_PATH = ROOT / "assets" / "icon.ico"
 
 
 def main() -> None:
@@ -28,6 +29,8 @@ def main() -> None:
         str(ROOT / "src"),
         str(ENTRYPOINT),
     ]
+    if ICON_PATH.exists():
+        pyinstaller_cmd.extend(["--icon", str(ICON_PATH)])
     subprocess.run(pyinstaller_cmd, check=True, cwd=ROOT)
 
     bundle_dir = DIST_DIR / bundle_name(system)
