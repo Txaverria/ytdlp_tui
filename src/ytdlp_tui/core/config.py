@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from json import JSONDecodeError
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -30,7 +31,11 @@ def load_config() -> AppConfig:
     if not path.exists():
         return default_config()
 
-    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    except (JSONDecodeError, OSError):
+        return default_config()
+
     defaults = default_config()
     return AppConfig(
         download_dir=data.get("download_dir", defaults.download_dir),
