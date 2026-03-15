@@ -65,12 +65,13 @@ def create_archive(bundle_dir: Path, system: str) -> Path:
         archive_path = DIST_DIR / f"{bundle_dir.name}.zip"
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
             for path in bundle_dir.rglob("*"):
-                archive.write(path, path.relative_to(bundle_dir.parent))
+                archive.write(path, path.relative_to(bundle_dir))
         return archive_path
 
     archive_path = DIST_DIR / f"{bundle_dir.name}.tar.gz"
     with tarfile.open(archive_path, "w:gz") as archive:
-        archive.add(bundle_dir, arcname=bundle_dir.name)
+        for path in bundle_dir.iterdir():
+            archive.add(path, arcname=path.name)
     return archive_path
 
 
