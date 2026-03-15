@@ -7,7 +7,7 @@ from textual.widgets import Button, Footer, Header, Input, Static
 
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
 from ytdlp_tui.core.dependencies import install_managed_ffmpeg, install_managed_ytdlp
-from ytdlp_tui.core.platform import dependency_policy_for_current_platform, open_in_file_manager
+from ytdlp_tui.core.platform import current_platform, dependency_policy_for_current_platform, open_in_file_manager
 
 
 class SettingsScreen(Screen[None]):
@@ -22,14 +22,17 @@ class SettingsScreen(Screen[None]):
 
         yield Header()
         yield VerticalScroll(
+            Static("", classes="spacer"),
             Static("Settings", classes="title"),
             Static("Configure where downloads go and how dependencies are managed.", classes="subtitle"),
+            Static("", classes="spacer"),
             Static("Download Directory", classes="title"),
             Input(
                 value=config.download_dir,
                 placeholder=get_default_downloads_dir(),
                 id="download_dir_input",
             ),
+            Static("", classes="spacer"),
             Horizontal(
                 Button("Save", id="save_settings_button", variant="primary"),
                 Button("Open Download Folder", id="open_download_dir_button"),
@@ -39,12 +42,16 @@ class SettingsScreen(Screen[None]):
             Static("Dependency Management", classes="title"),
             Static(f"yt-dlp policy: {policy.ytdlp}", id="ytdlp_policy", classes="note"),
             Static(self._dependency_detail(app.ytdlp_status), id="ytdlp_detail", classes="note"),
+            Static("", classes="spacer"),
             Button("Install or Update yt-dlp", id="install_ytdlp_button"),
+            Static("", classes="spacer"),
             Static(f"ffmpeg policy: {policy.ffmpeg}", id="ffmpeg_policy", classes="note"),
             Static(self._dependency_detail(app.ffmpeg_status), id="ffmpeg_detail", classes="note"),
+            Static("", classes="spacer"),
             Button("Install or Update ffmpeg", id="install_ffmpeg_button"),
+            Static("", classes="spacer"),
             Static(
-                "Linux and macOS prefer user-installed tools. Windows defaults to managed downloads.",
+                self._platform_dependency_note(),
                 classes="note",
             ),
             id="settings_panel",
@@ -134,3 +141,12 @@ class SettingsScreen(Screen[None]):
                 return status.path
             return status.source
         return status.message or "Not available"
+
+    @staticmethod
+    def _platform_dependency_note() -> str:
+        platform_name = current_platform()
+        if platform_name == "windows":
+            return "Windows defaults to managed yt-dlp and ffmpeg downloads."
+        if platform_name == "macos":
+            return "macOS prefers user-installed yt-dlp and ffmpeg."
+        return "Linux prefers user-installed yt-dlp and ffmpeg."
