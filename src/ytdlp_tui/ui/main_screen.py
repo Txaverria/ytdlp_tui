@@ -2,8 +2,10 @@ from typing import TYPE_CHECKING
 
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.widgets import Button, Footer, Header, Input, Select, Static
 
+from ytdlp_tui.core.downloads import validate_download_request
+from ytdlp_tui.core.models import DownloadRequest
 from ytdlp_tui.core.platform import open_in_file_manager
 
 if TYPE_CHECKING:
@@ -21,6 +23,12 @@ class MainScreen(Screen[None]):
             Static("Download", classes="title"),
             Static("Paste a URL or search term to begin.", classes="subtitle"),
             Input(placeholder="URL or search term", id="download_input"),
+            Select(
+                [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
+                value="video",
+                id="mode_select",
+                prompt="Mode",
+            ),
             Horizontal(
                 Button("Download", id="download_button", variant="primary"),
                 Button("Open Folder", id="open_folder_button"),
@@ -37,9 +45,13 @@ class MainScreen(Screen[None]):
                 id="status_text",
                 classes="note",
             ),
+            Static("", id="dependency_text", classes="note"),
             id="main_panel",
         )
         yield Footer()
+
+    def on_mount(self) -> None:
+        self._refresh_status()
 
     def action_settings(self) -> None:
         from ytdlp_tui.ui.settings_screen import SettingsScreen
@@ -52,7 +64,7 @@ class MainScreen(Screen[None]):
         elif event.button.id == "open_folder_button":
             self._open_download_dir()
         elif event.button.id == "download_button":
-            self.notify("Download execution is the next milestone.")
+            self._prepare_download()
 
     def _open_download_dir(self) -> None:
         app = self.app
@@ -65,6 +77,50 @@ class MainScreen(Screen[None]):
 
     def on_screen_resume(self) -> None:
         app = self.app
+        app.refresh_dependency_statuses()
         self.query_one("#download_dir_text", Static).update(
             f"Downloads will go to: {app.config.download_dir}"
         )
+        self._refresh_status()
+
+    def _prepare_download(self) -> None:
+        source = self.query_one("#download_input", Input).value
+        mode = self.query_one("#mode_select", Select).value
+        request = DownloadRequest(
+            source=source,
+            mode=str(mode),
+            download_dir=self.app.config.download_dir,
+        )
+
+        errors = validate_download_request(request)
+        status_widget = self.query_one("#status_text", Static)
+        if errors:
+            status_widget.update("\n".join(errors))
+            self.notify(errors[0], severity="error")
+            return
+
+        status_widget.update(
+            "Validation passed. The next milestone will execute yt-dlp and stream progress here."
+        )
+        self.notify("Download request is valid.")
+
+    def _refresh_status(self) -> None:
+        app = self.app
+        dependency_widget = self.query_one("#dependency_text", Static)
+        dependency_widget.update(
+            "\n".join(
+                [
+                    self._format_dependency("yt-dlp", app.ytdlp_status),
+                    self._format_dependency("ffmpeg", app.ffmpeg_status),
+                ]
+            )
+        )
+
+    @staticmethod
+    def _format_dependency(name: str, status) -> str:
+        if status.available:
+            detail = f"{status.source}"
+            if status.version:
+                detail += f", {status.version}"
+            return f"{name}: {detail}"
+        return f"{name}: {status.message or 'missing'}"

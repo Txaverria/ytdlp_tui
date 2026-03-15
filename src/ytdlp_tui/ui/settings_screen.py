@@ -15,6 +15,7 @@ class SettingsScreen(Screen[None]):
         app = self.app
 
         config = app.config
+        app.refresh_dependency_statuses()
         policy = dependency_policy_for_current_platform()
 
         yield Header()
@@ -30,6 +31,8 @@ class SettingsScreen(Screen[None]):
             Button("Open Download Folder", id="open_download_dir_button"),
             Static(f"yt-dlp policy: {policy.ytdlp}", id="ytdlp_policy"),
             Static(f"ffmpeg policy: {policy.ffmpeg}", id="ffmpeg_policy"),
+            Static(self._dependency_detail(app.ytdlp_status), id="ytdlp_detail", classes="note"),
+            Static(self._dependency_detail(app.ffmpeg_status), id="ffmpeg_detail", classes="note"),
             Static(
                 "Linux and macOS prefer user-installed tools. Windows defaults to managed downloads.",
                 classes="note",
@@ -56,6 +59,7 @@ class SettingsScreen(Screen[None]):
         path.mkdir(parents=True, exist_ok=True)
 
         app.update_config(AppConfig(download_dir=str(path)))
+        app.refresh_dependency_statuses()
         self.notify("Settings saved.")
 
     def _open_download_dir(self) -> None:
@@ -68,3 +72,13 @@ class SettingsScreen(Screen[None]):
             self.notify("Opened download folder in the system file manager.")
         except Exception as exc:
             self.notify(f"Could not open folder: {exc}", severity="error")
+
+    @staticmethod
+    def _dependency_detail(status) -> str:
+        if status.available:
+            if status.path and status.version:
+                return f"{status.path} ({status.version})"
+            if status.path:
+                return status.path
+            return status.source
+        return status.message or "Not available"

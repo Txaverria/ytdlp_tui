@@ -1,6 +1,8 @@
 from textual.app import App
 
 from ytdlp_tui.core.config import AppConfig, load_config, save_config
+from ytdlp_tui.core.dependencies import detect_ffmpeg, detect_ytdlp
+from ytdlp_tui.core.models import DependencyStatus
 
 from ytdlp_tui.ui.main_screen import MainScreen
 
@@ -65,10 +67,17 @@ class YtDlpTuiApp(App[None]):
 
     def on_mount(self) -> None:
         self.config = load_config()
+        self.refresh_dependency_statuses()
         self.push_screen(MainScreen())
 
     config: AppConfig
+    ytdlp_status: DependencyStatus
+    ffmpeg_status: DependencyStatus
 
     def update_config(self, config: AppConfig) -> None:
         self.config = config
         save_config(config)
+
+    def refresh_dependency_statuses(self) -> None:
+        self.ytdlp_status = detect_ytdlp()
+        self.ffmpeg_status = detect_ffmpeg()
