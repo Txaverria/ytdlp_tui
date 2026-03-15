@@ -1,0 +1,41 @@
+name: build-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[build]
+
+      - name: Build packaged bundle
+        run: python scripts/package_release.py
+
+      - name: Upload release bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytdlp-tui-${{ matrix.os }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz

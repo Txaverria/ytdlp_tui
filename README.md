@@ -54,6 +54,28 @@ python -m ytdlp_tui
 
 Once packaging is in place, end users should not need to install Python separately.
 
+## Packaging
+
+The repository now includes a GitHub Actions release build workflow at [.github/workflows/release.yml](/home/teaex/Coding/YT-DLP-PWSH-UI/.github/workflows/release.yml).
+
+Current packaging approach:
+
+- PyInstaller builds native bundles on each target OS
+- Windows builds on Windows
+- macOS builds on macOS
+- Linux builds on Linux
+
+This follows PyInstaller's platform model: each target OS must be built on that OS.
+
+Local packaging command:
+
+```bash
+python -m pip install .[build]
+python scripts/package_release.py
+```
+
+That produces an archive under `dist/` for the current platform.
+
 ## Roadmap
 
 The active rebuild plan lives in [`docs/implementation-roadmap.md`](/home/teaex/Coding/YT-DLP-PWSH-UI/docs/implementation-roadmap.md).

@@ -12,6 +12,11 @@ dependencies = [
   "textual>=0.58,<1.0",
 ]
 
+[project.optional-dependencies]
+build = [
+  "pyinstaller>=6.19.0",
+]
+
 [project.scripts]
 ytdlp-tui = "ytdlp_tui.main:run"
 
