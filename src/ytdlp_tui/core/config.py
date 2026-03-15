@@ -10,10 +10,16 @@ from ytdlp_tui.core.platform import get_default_downloads_dir
 @dataclass(slots=True)
 class AppConfig:
     download_dir: str
+    output_format: str
+    quality: str
 
 
 def default_config() -> AppConfig:
-    return AppConfig(download_dir=get_default_downloads_dir())
+    return AppConfig(
+        download_dir=get_default_downloads_dir(),
+        output_format="mp4",
+        quality="high",
+    )
 
 
 def load_config() -> AppConfig:
@@ -22,7 +28,12 @@ def load_config() -> AppConfig:
         return default_config()
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    return AppConfig(download_dir=data.get("download_dir", get_default_downloads_dir()))
+    defaults = default_config()
+    return AppConfig(
+        download_dir=data.get("download_dir", defaults.download_dir),
+        output_format=data.get("output_format", defaults.output_format),
+        quality=data.get("quality", defaults.quality),
+    )
 
 
 def save_config(config: AppConfig) -> None:

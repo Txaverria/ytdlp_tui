@@ -72,14 +72,12 @@ class MainScreen(Screen[None]):
                     Select(
                         [("MP3", "mp3"), ("OGG", "ogg"), ("MP4", "mp4"), ("WebM", "webm")],
                         value="mp4",
-                        allow_blank=False,
                         id="format_select",
                         prompt="Format",
                     ),
                     Select(
                         [("High", "high"), ("Low", "low")],
                         value="high",
-                        allow_blank=False,
                         id="quality_select",
                         prompt="Quality",
                     ),
@@ -105,6 +103,7 @@ class MainScreen(Screen[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        self._sync_selects_from_config()
         self._refresh_status()
         self._update_layout_mode()
         self._update_action_visibility()
@@ -139,6 +138,7 @@ class MainScreen(Screen[None]):
     def on_screen_resume(self) -> None:
         app = self.app
         app.refresh_dependency_statuses()
+        self._sync_selects_from_config()
         self._refresh_status()
         self._update_action_visibility()
 
@@ -148,8 +148,22 @@ class MainScreen(Screen[None]):
             return
 
         raw_input = self.query_one("#input_group", UrlInput).input.value
-        output_format = self.query_one("#format_select", Select).value
-        quality = self.query_one("#quality_select", Select).value
+        format_select = self.query_one("#format_select", Select)
+        quality_select = self.query_one("#quality_select", Select)
+        output_format = format_select.value
+        quality = quality_select.value
+        status_widget = self.query_one("#status_text", Static)
+
+        if output_format is Select.BLANK:
+            status_widget.update("Select a format before downloading.")
+            self.notify("Select a format before downloading.", severity="error")
+            return
+
+        if quality is Select.BLANK:
+            status_widget.update("Select a quality before downloading.")
+            self.notify("Select a quality before downloading.", severity="error")
+            return
+
         request = DownloadRequest(
             sources=parse_sources(raw_input),
             output_format=str(output_format),
@@ -158,7 +172,6 @@ class MainScreen(Screen[None]):
         )
 
         errors = validate_download_request(request)
-        status_widget = self.query_one("#status_text", Static)
         if errors:
             status_widget.update("\n".join(errors))
             self.notify(errors[0], severity="error")
@@ -259,8 +272,27 @@ class MainScreen(Screen[None]):
         if normalized != value:
             event.input.value = normalized
 
+    def on_select_changed(self, event: Select.Changed) -> None:
+        config = self.app.config
+        changed = False
+
+        if event.select.id == "format_select" and event.value is not Select.BLANK:
+            config.output_format = str(event.value)
+            changed = True
+        elif event.select.id == "quality_select" and event.value is not Select.BLANK:
+            config.quality = str(event.value)
+            changed = True
+
+        if changed:
+            self.app.update_config(config)
+
     def _update_layout_mode(self) -> None:
         width = self.app.size.width
         compact = width < 136
         self.set_class(compact, "compact-layout")
         self.query_one("#hero_text", Static).update(self._build_hero(compact))
+
+    def _sync_selects_from_config(self) -> None:
+        config = self.app.config
+        self.query_one("#format_select", Select).value = config.output_format
+        self.query_one("#quality_select", Select).value = config.quality
