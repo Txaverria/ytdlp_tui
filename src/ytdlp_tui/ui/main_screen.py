@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from textual import work
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 
 class MainScreen(Screen[None]):
     BINDINGS = [("s", "settings", "Settings"), ("q", "quit", "Quit")]
+    recent_files: list[str] = []
 
     def compose(self):
         app = self.app
@@ -34,6 +36,8 @@ class MainScreen(Screen[None]):
             Horizontal(
                 Button("Download", id="download_button", variant="primary"),
                 Button("Open Folder", id="open_folder_button"),
+                Button("Open Latest File", id="open_latest_file_button"),
+                Button("Open Latest File Folder", id="open_latest_file_folder_button"),
                 Button("Settings", id="settings_button"),
                 classes="actions",
             ),
@@ -67,6 +71,10 @@ class MainScreen(Screen[None]):
             self.action_settings()
         elif event.button.id == "open_folder_button":
             self._open_download_dir()
+        elif event.button.id == "open_latest_file_button":
+            self._open_latest_file()
+        elif event.button.id == "open_latest_file_folder_button":
+            self._open_latest_file_folder()
         elif event.button.id == "download_button":
             self._prepare_download()
 
@@ -138,6 +146,7 @@ class MainScreen(Screen[None]):
         status_widget = self.query_one("#status_text", Static)
         log_widget = self.query_one("#log_text", Static)
         files_widget = self.query_one("#recent_files_text", Static)
+        self.recent_files = result.downloaded_files
 
         if result.success:
             status_widget.update("Download finished.")
@@ -158,3 +167,30 @@ class MainScreen(Screen[None]):
             log_widget.update("Log:\n" + "\n".join(tail))
         else:
             log_widget.update("")
+
+    def _open_latest_file(self) -> None:
+        latest = self._latest_file()
+        if not latest:
+            self.notify("No downloaded file is available yet.", severity="warning")
+            return
+
+        try:
+            open_in_file_manager(latest)
+            self.notify("Opened latest downloaded file.")
+        except Exception as exc:
+            self.notify(f"Could not open file: {exc}", severity="error")
+
+    def _open_latest_file_folder(self) -> None:
+        latest = self._latest_file()
+        if not latest:
+            self.notify("No downloaded file is available yet.", severity="warning")
+            return
+
+        try:
+            open_in_file_manager(Path(latest).parent)
+            self.notify("Opened latest file folder.")
+        except Exception as exc:
+            self.notify(f"Could not open folder: {exc}", severity="error")
+
+    def _latest_file(self) -> str | None:
+        return self.recent_files[-1] if self.recent_files else None
