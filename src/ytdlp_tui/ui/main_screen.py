@@ -7,7 +7,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Select, Static
 
-from ytdlp_tui.core.downloads import validate_download_request
+from ytdlp_tui.core.downloads import parse_sources, validate_download_request
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
 from ytdlp_tui.core.platform import open_in_file_manager
 from ytdlp_tui.core.runner import run_download
@@ -29,17 +29,32 @@ class MainScreen(Screen[None]):
         yield Header()
         yield VerticalScroll(
             Static("Download", classes="title"),
-            Static("Paste a URL or search term to begin.", classes="subtitle"),
+            Static("Paste one or more URLs or search terms to begin.", classes="subtitle"),
             Vertical(
                 Horizontal(
                     Input(placeholder="URL or search term", id="download_input"),
                     Select(
-                        [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
-                        value="video",
-                        id="mode_select",
-                        prompt="Mode",
+                        [
+                            ("MP3", "mp3"),
+                            ("OGG", "ogg"),
+                            ("MP4", "mp4"),
+                            ("WebM", "webm"),
+                        ],
+                        value="mp4",
+                        id="format_select",
+                        prompt="Format",
+                    ),
+                    Select(
+                        [("High", "high"), ("Low", "low")],
+                        value="high",
+                        id="quality_select",
+                        prompt="Quality",
                     ),
                     id="source_row",
+                ),
+                Static(
+                    "Multiple inputs supported: separate with spaces, commas, semicolons, or new lines.",
+                    classes="note tight-note",
                 ),
                 Vertical(
                     Horizontal(
@@ -164,11 +179,13 @@ class MainScreen(Screen[None]):
             self.notify("A download is already running.", severity="warning")
             return
 
-        source = self.query_one("#download_input", Input).value
-        mode = self.query_one("#mode_select", Select).value
+        raw_input = self.query_one("#download_input", Input).value
+        output_format = self.query_one("#format_select", Select).value
+        quality = self.query_one("#quality_select", Select).value
         request = DownloadRequest(
-            source=source,
-            mode=str(mode),
+            sources=parse_sources(raw_input),
+            output_format=str(output_format),
+            quality=str(quality),
             download_dir=self.app.config.download_dir,
         )
 
@@ -182,7 +199,7 @@ class MainScreen(Screen[None]):
         self.last_request = request
         self.cancel_event = threading.Event()
         self.download_in_progress = True
-        status_widget.update("Starting download...")
+        status_widget.update(f"Starting download for {len(request.sources)} item(s)...")
         self.query_one("#log_text", Static).update("")
         self.query_one("#recent_files_text", Static).update("")
         self._run_download(request)

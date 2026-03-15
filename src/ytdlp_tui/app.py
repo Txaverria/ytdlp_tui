@@ -110,7 +110,12 @@ class YtDlpTuiApp(App[None]):
     }
 
     #source_row Select {
-        width: 30%;
+        width: 15%;
+        margin-right: 1;
+    }
+
+    #source_row Select:last-of-type {
+        margin-right: 0;
     }
 
     #main_columns {

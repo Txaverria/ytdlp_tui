@@ -90,12 +90,28 @@ def _build_args(request: DownloadRequest, ytdlp_path: str, ffmpeg_path: str | No
     if ffmpeg_path:
         args.extend(["--ffmpeg-location", str(Path(ffmpeg_path).parent)])
 
-    if request.mode == "audio":
-        args.extend(["-x", "--audio-format", "mp3", "--audio-quality", "0"])
-    elif request.mode == "video":
-        args.extend(["--remux-video", "mp4"])
+    quality = request.quality
+    output_format = request.output_format
 
-    args.append(request.source)
+    if output_format == "mp3":
+        args.extend(["-f", "bestaudio/best" if quality == "high" else "worstaudio/bestaudio/best"])
+        args.extend(["-x", "--audio-format", "mp3", "--audio-quality", "0" if quality == "high" else "7"])
+    elif output_format == "ogg":
+        args.extend(["-f", "bestaudio/best" if quality == "high" else "worstaudio/bestaudio/best"])
+        args.extend(["-x", "--audio-format", "vorbis", "--audio-quality", "4" if quality == "high" else "8"])
+    elif output_format == "mp4":
+        if quality == "high":
+            args.extend(["-f", "bestvideo*+bestaudio/best"])
+        else:
+            args.extend(["-f", "worstvideo*+worstaudio/worst"])
+        args.extend(["--remux-video", "mp4"])
+    elif output_format == "webm":
+        if quality == "high":
+            args.extend(["-f", "bestvideo*[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best"])
+        else:
+            args.extend(["-f", "worstvideo*[ext=webm]+worstaudio[ext=webm]/worst[ext=webm]/worst"])
+
+    args.extend(request.sources)
     return args
 
 

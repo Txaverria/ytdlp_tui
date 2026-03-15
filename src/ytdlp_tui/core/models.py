@@ -5,8 +5,9 @@ from dataclasses import dataclass
 
 @dataclass(slots=True)
 class DownloadRequest:
-    source: str
-    mode: str
+    sources: list[str]
+    output_format: str
+    quality: str
     download_dir: str
 
 
