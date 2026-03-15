@@ -1,81 +1,70 @@
 # ytdlp-tui
 
-Cross-platform terminal UI for `yt-dlp`, rebuilt around Python and Textual.
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Textual](https://img.shields.io/badge/UI-Textual-5A2FC2)](https://textual.textualize.io/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/Txaverria/ytdlp-tui/release.yml?label=build)](https://github.com/Txaverria/ytdlp-tui/actions/workflows/release.yml)
 
-## Status
+```text
+ █████ █████ ███████████ ██████████   █████       ███████████                   ███████████ █████  █████ █████
+▒▒███ ▒▒███ ▒█▒▒▒███▒▒▒█▒▒███▒▒▒▒███ ▒▒███       ▒▒███▒▒▒▒▒███                 ▒█▒▒▒███▒▒▒█▒▒███  ▒▒███ ▒▒███
+ ▒▒███ ███  ▒   ▒███  ▒  ▒███   ▒▒███ ▒███        ▒███    ▒███                 ▒   ▒███  ▒  ▒███   ▒███  ▒███
+  ▒▒█████       ▒███     ▒███    ▒███ ▒███        ▒██████████     ██████████       ▒███     ▒███   ▒███  ▒███
+   ▒▒███        ▒███     ▒███    ▒███ ▒███        ▒███▒▒▒▒▒▒     ▒▒▒▒▒▒▒▒▒▒        ▒███     ▒███   ▒███  ▒███
+    ▒███        ▒███     ▒███    ███  ▒███      █ ▒███                             ▒███     ▒███   ▒███  ▒███
+    █████       █████    ██████████   ███████████ █████                            █████    ▒▒████████   █████
+   ▒▒▒▒▒       ▒▒▒▒▒    ▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒                            ▒▒▒▒▒      ▒▒▒▒▒▒▒▒   ▒▒▒▒▒
+```
 
-This repository is being rebuilt from a legacy Windows-only PowerShell launcher into a proper cross-platform app.
+Cross-platform terminal UI for `yt-dlp`, built with Python and Textual.
 
-The legacy launcher is still present for reference:
+## Features
 
-- `yt-dlp-launcher.ps1`
-- `launch.bat`
+- Clean TUI for video and audio downloads
+- Multi-link input support
+- Format presets: `mp3`, `m4a`, `ogg`, `mp4`, `webm`
+- Quality presets: `high`, `medium`, `low`
+- Live log output and progress states
+- Managed `yt-dlp` install/update
+- Windows-first managed `ffmpeg` install/update
 
-## Goals
+## Platform Behavior
 
-- Fast, clean TUI for downloads
-- Simple settings screen
-- Cross-platform support for Linux, macOS, and Windows
-- Sensible defaults for download location
-- Easy access to downloaded files
-- Managed updates where they help users most
+- Linux: prefer system `yt-dlp` and `ffmpeg`
+- macOS: prefer system `yt-dlp` and `ffmpeg`
+- Windows: managed installs are supported directly in the app
 
-## Dependency Policy
-
-The app will handle `yt-dlp` and `ffmpeg` differently by platform:
-
-- Linux: prefer the user's installed `yt-dlp` and `ffmpeg`
-- macOS: prefer the user's installed `yt-dlp` and `ffmpeg`
-- Windows: default to managed downloads for `yt-dlp` and `ffmpeg`
-
-This matches the practical installation friction on each OS.
-
-## Planned Features
-
-- Main download screen with a single input field
-- Audio/video/custom download presets
-- Settings screen for download path and defaults
-- Download history with open file/open folder actions
-- `yt-dlp` install/update management
-- `ffmpeg` detection and install/update management
-
-## Development
-
-The new app uses:
-
-- Python
-- Textual
-
-Local run target:
+## Run Locally
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 python -m ytdlp_tui
 ```
 
-Once packaging is in place, end users should not need to install Python separately.
+On Windows PowerShell:
 
-## Packaging
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -e .
+python -m ytdlp_tui
+```
 
-The repository now includes a GitHub Actions release build workflow at [.github/workflows/release.yml](/home/teaex/Coding/YT-DLP-PWSH-UI/.github/workflows/release.yml).
-
-Current packaging approach:
-
-- PyInstaller builds native bundles on each target OS
-- Windows builds on Windows
-- macOS builds on macOS
-- Linux builds on Linux
-
-This follows PyInstaller's platform model: each target OS must be built on that OS.
-
-Local packaging command:
+## Build a Release
 
 ```bash
 python -m pip install .[build]
 python scripts/package_release.py
 ```
 
-That produces an archive under `dist/` for the current platform.
+Build output is written to `dist/`.
 
-## Roadmap
+## GitHub Actions
 
-The active rebuild plan lives in [`docs/implementation-roadmap.md`](/home/teaex/Coding/YT-DLP-PWSH-UI/docs/implementation-roadmap.md).
+GitHub Actions builds release bundles for Linux, macOS, and Windows from [`.github/workflows/release.yml`](./.github/workflows/release.yml).
+
+## License
+
+MIT. See [`LICENSE`](./LICENSE).
