@@ -1,7 +1,7 @@
 from textual.app import App
 
 from ytdlp_tui.core.config import AppConfig, load_config, save_config
-from ytdlp_tui.core.dependencies import detect_ffmpeg, detect_ytdlp
+from ytdlp_tui.core.dependencies import detect_deno, detect_ffmpeg, detect_ytdlp
 from ytdlp_tui.core.models import DependencyStatus
 
 from ytdlp_tui.ui.main_screen import MainScreen
@@ -224,6 +224,7 @@ class YtDlpTuiApp(App[None]):
     config: AppConfig
     ytdlp_status: DependencyStatus
     ffmpeg_status: DependencyStatus
+    deno_status: DependencyStatus
 
     def update_config(self, config: AppConfig) -> None:
         self.config = config
@@ -232,6 +233,7 @@ class YtDlpTuiApp(App[None]):
     def refresh_dependency_statuses(self) -> None:
         self.ytdlp_status = detect_ytdlp()
         self.ffmpeg_status = detect_ffmpeg()
+        self.deno_status = detect_deno()
 
     def _refresh_theme_dependent_widgets(self, _theme) -> None:
         for screen in self.screen_stack:

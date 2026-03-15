@@ -119,6 +119,25 @@ def detect_ffmpeg() -> DependencyStatus:
     )
 
 
+def detect_deno() -> DependencyStatus:
+    deno_path = shutil.which("deno")
+    if deno_path:
+        return DependencyStatus(
+            name="deno",
+            available=True,
+            source="system",
+            version=_read_version([deno_path, "--version"]),
+            path=deno_path,
+        )
+
+    return DependencyStatus(
+        name="deno",
+        available=False,
+        source="missing",
+        message="Deno was not found on this system.",
+    )
+
+
 def install_managed_ytdlp(progress_callback: Callable[[str], None] | None = None) -> DependencyStatus:
     destination = managed_ytdlp_path()
     destination.parent.mkdir(parents=True, exist_ok=True)

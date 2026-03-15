@@ -48,6 +48,10 @@ class SettingsScreen(Screen[None]):
             Static("", classes="spacer"),
             Button("Install or Update ffmpeg", id="install_ffmpeg_button"),
             Static("", classes="spacer"),
+            Static("YouTube Runtime", classes="title"),
+            Static(self._deno_detail(app.deno_status), id="deno_detail", classes="note"),
+            Static("Some YouTube downloads may require Deno.", classes="note"),
+            Static("", classes="spacer"),
             Static(
                 self._platform_dependency_note(),
                 classes="note",
@@ -152,3 +156,10 @@ class SettingsScreen(Screen[None]):
         if platform_name == "macos":
             return "macOS prefers user-installed yt-dlp and ffmpeg."
         return "Linux prefers user-installed yt-dlp and ffmpeg."
+
+    @staticmethod
+    def _deno_detail(status) -> str:
+        if status.available:
+            version = status.version.splitlines()[0] if status.version else "found"
+            return f"Deno: found ({version})"
+        return "Deno: not found"
