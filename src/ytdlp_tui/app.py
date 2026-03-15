@@ -37,10 +37,16 @@ class YtDlpTuiApp(App[None]):
         margin: 0 0 1 0;
     }
 
+    .section-title {
+        text-style: bold;
+        color: #7dd3c7;
+        margin: 1 0 0 0;
+    }
+
     #main_panel, #settings_panel {
         width: 1fr;
-        max-width: 90;
-        height: auto;
+        max-width: 108;
+        height: 1fr;
         margin: 1 2;
         padding: 1 2;
         border: round #35506b;
@@ -52,16 +58,39 @@ class YtDlpTuiApp(App[None]):
         margin: 1 0;
     }
 
+    .section-block {
+        margin: 0 0 1 0;
+        padding: 0 0 1 0;
+        border-bottom: solid #223243;
+    }
+
+    .status-box {
+        margin: 1 0 0 0;
+        padding: 1;
+        min-height: 3;
+        border: round #35506b;
+        background: #0d1721;
+    }
+
     Button {
         margin-right: 1;
+        margin-bottom: 1;
     }
 
     Input {
         margin: 0 0 1 0;
     }
 
+    Select {
+        margin: 0 0 1 0;
+    }
+
     .note {
         color: #c7d3df;
+    }
+
+    .status-note {
+        color: #f3efe6;
     }
     """
 

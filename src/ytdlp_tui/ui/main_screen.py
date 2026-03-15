@@ -26,34 +26,52 @@ class MainScreen(Screen[None]):
         yield Vertical(
             Static("Download", classes="title"),
             Static("Paste a URL or search term to begin.", classes="subtitle"),
-            Input(placeholder="URL or search term", id="download_input"),
-            Select(
-                [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
-                value="video",
-                id="mode_select",
-                prompt="Mode",
+            Vertical(
+                Static("Source", classes="section-title"),
+                Input(placeholder="URL or search term", id="download_input"),
+                Select(
+                    [("Audio", "audio"), ("Video", "video"), ("Custom", "custom")],
+                    value="video",
+                    id="mode_select",
+                    prompt="Mode",
+                ),
+                Horizontal(
+                    Button("Download", id="download_button", variant="primary"),
+                    Button("Open Folder", id="open_folder_button"),
+                    Button("Settings", id="settings_button"),
+                    classes="actions",
+                ),
+                Static(
+                    f"Downloads will go to: {app.config.download_dir}",
+                    id="download_dir_text",
+                    classes="note",
+                ),
+                classes="section-block",
             ),
-            Horizontal(
-                Button("Download", id="download_button", variant="primary"),
-                Button("Open Folder", id="open_folder_button"),
-                Button("Open Latest File", id="open_latest_file_button"),
-                Button("Open Latest File Folder", id="open_latest_file_folder_button"),
-                Button("Settings", id="settings_button"),
-                classes="actions",
+            Vertical(
+                Static("Status", classes="section-title"),
+                Static(
+                    "Ready for a download request.",
+                    id="status_text",
+                    classes="status-note status-box",
+                ),
+                Static("", id="dependency_text", classes="note"),
+                classes="section-block",
             ),
-            Static(
-                f"Downloads will go to: {app.config.download_dir}",
-                id="download_dir_text",
-                classes="note",
+            Vertical(
+                Static("Recent Result", classes="section-title"),
+                Horizontal(
+                    Button("Open Latest File", id="open_latest_file_button"),
+                    Button("Open Latest File Folder", id="open_latest_file_folder_button"),
+                    classes="actions",
+                ),
+                Static("", id="recent_files_text", classes="note status-box"),
+                classes="section-block",
             ),
-            Static(
-                "This is the first scaffold for the rebuilt app. Download execution comes next.",
-                id="status_text",
-                classes="note",
+            Vertical(
+                Static("Activity", classes="section-title"),
+                Static("", id="log_text", classes="note status-box"),
             ),
-            Static("", id="dependency_text", classes="note"),
-            Static("", id="recent_files_text", classes="note"),
-            Static("", id="log_text", classes="note"),
             id="main_panel",
         )
         yield Footer()
