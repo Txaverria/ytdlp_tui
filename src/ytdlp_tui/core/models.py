@@ -25,4 +25,6 @@ class DownloadResult:
     success: bool
     output: list[str]
     downloaded_files: list[str]
+    summary: str | None = None
+    progress_line: str | None = None
     error: str | None = None

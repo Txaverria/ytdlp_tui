@@ -15,6 +15,7 @@ def run_download(request: DownloadRequest) -> DownloadResult:
             success=False,
             output=[],
             downloaded_files=[],
+            summary="yt-dlp is unavailable.",
             error=ytdlp.message or "yt-dlp is not available.",
         )
 
@@ -41,6 +42,7 @@ def run_download(request: DownloadRequest) -> DownloadResult:
             success=False,
             output=[],
             downloaded_files=[],
+            summary="The download process could not be started.",
             error=str(exc),
         )
 
@@ -52,11 +54,15 @@ def run_download(request: DownloadRequest) -> DownloadResult:
     downloaded_files = _read_downloaded_files(print_file)
     success = completed.returncode == 0
     error = None if success else f"yt-dlp exited with code {completed.returncode}"
+    progress_line = _last_matching_line(output_lines, "[download]")
+    summary = _build_summary(success, output_lines, downloaded_files, error)
 
     return DownloadResult(
         success=success,
         output=output_lines,
         downloaded_files=downloaded_files,
+        summary=summary,
+        progress_line=progress_line,
         error=error,
     )
 
@@ -84,3 +90,44 @@ def _read_downloaded_files(path: Path) -> list[str]:
         return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     finally:
         path.unlink(missing_ok=True)
+
+
+def _last_matching_line(lines: list[str], prefix: str) -> str | None:
+    for line in reversed(lines):
+        if line.startswith(prefix):
+            return line
+    return None
+
+
+def _build_summary(
+    success: bool,
+    output_lines: list[str],
+    downloaded_files: list[str],
+    error: str | None,
+) -> str:
+    if success:
+        if downloaded_files:
+            return f"Finished successfully. {len(downloaded_files)} file(s) ready."
+
+        destination_line = _last_matching_line(output_lines, "[Merger] Merging formats into ")
+        if destination_line:
+            return "Finished successfully after merging formats."
+
+        destination_line = _last_matching_line(output_lines, "[ExtractAudio] Destination: ")
+        if destination_line:
+            return "Finished successfully after audio extraction."
+
+        destination_line = _last_matching_line(output_lines, "[download] Destination: ")
+        if destination_line:
+            return "Finished successfully."
+
+        return "Finished successfully."
+
+    if error:
+        return error
+
+    error_line = _last_matching_line(output_lines, "ERROR:")
+    if error_line:
+        return error_line
+
+    return "Download failed."

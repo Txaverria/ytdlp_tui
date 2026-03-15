@@ -149,10 +149,10 @@ class MainScreen(Screen[None]):
         self.recent_files = result.downloaded_files
 
         if result.success:
-            status_widget.update("Download finished.")
+            status_widget.update(result.summary or "Download finished.")
             self.notify("Download finished.")
         else:
-            status_widget.update(result.error or "Download failed.")
+            status_widget.update(result.summary or result.error or "Download failed.")
             self.notify(result.error or "Download failed.", severity="error")
 
         if result.downloaded_files:
@@ -164,7 +164,10 @@ class MainScreen(Screen[None]):
 
         if result.output:
             tail = result.output[-20:]
-            log_widget.update("Log:\n" + "\n".join(tail))
+            header = "Log:"
+            if result.progress_line:
+                header = f"Latest progress: {result.progress_line}\n\nLog:"
+            log_widget.update(header + "\n" + "\n".join(tail))
         else:
             log_widget.update("")
 
