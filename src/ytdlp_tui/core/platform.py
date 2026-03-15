@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import platform
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,3 +37,18 @@ def dependency_policy_for_current_platform() -> DependencyPolicy:
 
 def get_default_downloads_dir() -> str:
     return str(Path.home() / "Downloads")
+
+
+def open_in_file_manager(target: str | Path) -> None:
+    path = Path(target).expanduser().resolve()
+    system = current_platform()
+
+    if system == "windows":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return
+
+    if system == "macos":
+        subprocess.Popen(["open", str(path)])
+        return
+
+    subprocess.Popen(["xdg-open", str(path)])
