@@ -1,4 +1,5 @@
 from pathlib import Path
+import threading
 from typing import TYPE_CHECKING
 
 from textual import work
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
 class MainScreen(Screen[None]):
     BINDINGS = [("s", "settings", "Settings"), ("q", "quit", "Quit")]
     recent_files: list[str] = []
+    last_request: DownloadRequest | None = None
+    cancel_event: threading.Event | None = None
+    download_in_progress: bool = False
 
     def compose(self):
         app = self.app
@@ -37,6 +41,8 @@ class MainScreen(Screen[None]):
                 ),
                 Horizontal(
                     Button("Download", id="download_button", variant="primary"),
+                    Button("Cancel", id="cancel_download_button"),
+                    Button("Retry Latest", id="retry_download_button"),
                     Button("Open Folder", id="open_folder_button"),
                     Button("Settings", id="settings_button"),
                     classes="actions",
@@ -95,6 +101,10 @@ class MainScreen(Screen[None]):
             self._open_latest_file_folder()
         elif event.button.id == "download_button":
             self._prepare_download()
+        elif event.button.id == "cancel_download_button":
+            self._cancel_download()
+        elif event.button.id == "retry_download_button":
+            self._retry_latest_download()
 
     def _open_download_dir(self) -> None:
         app = self.app
@@ -114,6 +124,10 @@ class MainScreen(Screen[None]):
         self._refresh_status()
 
     def _prepare_download(self) -> None:
+        if self.download_in_progress:
+            self.notify("A download is already running.", severity="warning")
+            return
+
         source = self.query_one("#download_input", Input).value
         mode = self.query_one("#mode_select", Select).value
         request = DownloadRequest(
@@ -129,6 +143,9 @@ class MainScreen(Screen[None]):
             self.notify(errors[0], severity="error")
             return
 
+        self.last_request = request
+        self.cancel_event = threading.Event()
+        self.download_in_progress = True
         status_widget.update("Starting download...")
         self.query_one("#log_text", Static).update("")
         self.query_one("#recent_files_text", Static).update("")
@@ -157,16 +174,21 @@ class MainScreen(Screen[None]):
 
     @work(thread=True)
     def _run_download(self, request: DownloadRequest) -> None:
-        result = run_download(request)
+        result = run_download(request, self.cancel_event)
         self.call_from_thread(self._apply_download_result, result)
 
     def _apply_download_result(self, result: DownloadResult) -> None:
         status_widget = self.query_one("#status_text", Static)
         log_widget = self.query_one("#log_text", Static)
         files_widget = self.query_one("#recent_files_text", Static)
+        self.download_in_progress = False
+        self.cancel_event = None
         self.recent_files = result.downloaded_files
 
-        if result.success:
+        if result.cancelled:
+            status_widget.update(result.summary or "Download cancelled.")
+            self.notify("Download cancelled.", severity="warning")
+        elif result.success:
             status_widget.update(result.summary or "Download finished.")
             self.notify("Download finished.")
         else:
@@ -215,3 +237,27 @@ class MainScreen(Screen[None]):
 
     def _latest_file(self) -> str | None:
         return self.recent_files[-1] if self.recent_files else None
+
+    def _cancel_download(self) -> None:
+        if not self.download_in_progress or self.cancel_event is None:
+            self.notify("No download is running.", severity="warning")
+            return
+
+        self.cancel_event.set()
+        self.query_one("#status_text", Static).update("Cancelling download...")
+        self.notify("Cancelling download...")
+
+    def _retry_latest_download(self) -> None:
+        if self.download_in_progress:
+            self.notify("Wait for the current download to finish or cancel it first.", severity="warning")
+            return
+
+        if self.last_request is None:
+            self.notify("No previous download request is available.", severity="warning")
+            return
+
+        self.cancel_event = threading.Event()
+        self.download_in_progress = True
+        self.query_one("#status_text", Static).update("Retrying latest download...")
+        self.query_one("#log_text", Static).update("")
+        self._run_download(self.last_request)

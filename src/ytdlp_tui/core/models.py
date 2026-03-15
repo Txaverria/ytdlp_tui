@@ -27,4 +27,5 @@ class DownloadResult:
     downloaded_files: list[str]
     summary: str | None = None
     progress_line: str | None = None
+    cancelled: bool = False
     error: str | None = None

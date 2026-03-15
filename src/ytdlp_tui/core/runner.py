@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 
 from ytdlp_tui.core.dependencies import detect_ffmpeg, detect_ytdlp
 from ytdlp_tui.core.models import DownloadRequest, DownloadResult
 
 
-def run_download(request: DownloadRequest) -> DownloadResult:
+def run_download(request: DownloadRequest, cancel_event: threading.Event | None = None) -> DownloadResult:
     ytdlp = detect_ytdlp()
     if not ytdlp.available or not ytdlp.path:
         return DownloadResult(
@@ -30,12 +31,13 @@ def run_download(request: DownloadRequest) -> DownloadResult:
     args.extend(["--print-to-file", "after_move:filepath", str(print_file)])
 
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             args,
             cwd=request.download_dir,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            check=False,
+            bufsize=1,
         )
     except OSError as exc:
         return DownloadResult(
@@ -46,16 +48,29 @@ def run_download(request: DownloadRequest) -> DownloadResult:
             error=str(exc),
         )
 
-    if completed.stdout:
-        output_lines.extend(line for line in completed.stdout.splitlines() if line.strip())
-    if completed.stderr:
-        output_lines.extend(line for line in completed.stderr.splitlines() if line.strip())
+    cancelled = False
+    assert process.stdout is not None
+    for raw_line in process.stdout:
+        line = raw_line.strip()
+        if line:
+            output_lines.append(line)
+
+        if cancel_event and cancel_event.is_set():
+            cancelled = True
+            process.terminate()
+            break
+
+    process.wait()
+
+    if cancelled and process.poll() is None:
+        process.kill()
+        process.wait()
 
     downloaded_files = _read_downloaded_files(print_file)
-    success = completed.returncode == 0
-    error = None if success else f"yt-dlp exited with code {completed.returncode}"
+    success = process.returncode == 0 and not cancelled
+    error = None if success else f"yt-dlp exited with code {process.returncode}"
     progress_line = _last_matching_line(output_lines, "[download]")
-    summary = _build_summary(success, output_lines, downloaded_files, error)
+    summary = _build_summary(success, output_lines, downloaded_files, error, cancelled)
 
     return DownloadResult(
         success=success,
@@ -63,6 +78,7 @@ def run_download(request: DownloadRequest) -> DownloadResult:
         downloaded_files=downloaded_files,
         summary=summary,
         progress_line=progress_line,
+        cancelled=cancelled,
         error=error,
     )
 
@@ -104,7 +120,11 @@ def _build_summary(
     output_lines: list[str],
     downloaded_files: list[str],
     error: str | None,
+    cancelled: bool,
 ) -> str:
+    if cancelled:
+        return "Download cancelled."
+
     if success:
         if downloaded_files:
             return f"Finished successfully. {len(downloaded_files)} file(s) ready."
