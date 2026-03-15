@@ -10,6 +10,48 @@ function Write-Step {
     Write-Host "[ytdlp-tui] $Message"
 }
 
+function Assert-SafeAppDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Refusing to use an empty install path."
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($resolved)
+    if ($resolved -eq $root) {
+        throw "Refusing to remove a filesystem root: $resolved"
+    }
+
+    $leaf = Split-Path -Path $resolved -Leaf
+    if ($leaf -ne $AppName) {
+        throw "Refusing to remove an unexpected install path. Expected the final folder name to be '$AppName': $resolved"
+    }
+}
+
+function Assert-SafeStartMenuDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Refusing to use an empty Start Menu path."
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($resolved)
+    if ($resolved -eq $root) {
+        throw "Refusing to remove a filesystem root: $resolved"
+    }
+
+    $leaf = Split-Path -Path $resolved -Leaf
+    if ($leaf -ne $AppName) {
+        throw "Refusing to remove an unexpected Start Menu folder: $resolved"
+    }
+}
+
 function Load-Metadata {
     if (-not (Test-Path $MetadataPath)) {
         throw "Installation metadata was not found. Reinstall the app or remove it manually."
@@ -21,6 +63,8 @@ $metadata = Load-Metadata
 $installDir = $metadata.install_dir
 $startMenuDir = $metadata.start_menu_dir
 $updateScriptInAppDir = if ($metadata.PSObject.Properties.Name -contains "update_script_app_dir") { $metadata.update_script_app_dir } else { Join-Path $installDir "update-ytdlp-tui.ps1" }
+Assert-SafeAppDirectory -Path $installDir
+Assert-SafeStartMenuDirectory -Path $startMenuDir
 
 Write-Host ""
 Write-Host "This will remove:"

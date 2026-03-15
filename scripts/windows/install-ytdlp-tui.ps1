@@ -16,6 +16,27 @@ function Write-Step {
     Write-Host "[ytdlp-tui] $Message"
 }
 
+function Assert-SafeAppDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Refusing to use an empty install path."
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($resolved)
+    if ($resolved -eq $root) {
+        throw "Refusing to use a filesystem root as the install path: $resolved"
+    }
+
+    $leaf = Split-Path -Path $resolved -Leaf
+    if ($leaf -ne $AppName) {
+        throw "Refusing to use an unexpected install path. Expected the final folder name to be '$AppName': $resolved"
+    }
+}
+
 function Get-LatestReleaseAsset {
     $headers = @{
         "User-Agent" = "$AppName-installer"
@@ -129,6 +150,7 @@ function Copy-AppBundle {
     )
 
     if (Test-Path $DestinationDir) {
+        Assert-SafeAppDirectory -Path $DestinationDir
         Remove-Item $DestinationDir -Recurse -Force
     }
     New-Item -ItemType Directory -Path $DestinationDir -Force | Out-Null
@@ -136,6 +158,7 @@ function Copy-AppBundle {
 }
 
 $installDir = Select-InstallDirectory
+Assert-SafeAppDirectory -Path $installDir
 Confirm-InstallDirectory -DestinationDir $installDir
 $tempRoot = Join-Path $env:TEMP "$AppName-install-$([guid]::NewGuid().ToString('N'))"
 $zipPath = Join-Path $tempRoot $AssetName

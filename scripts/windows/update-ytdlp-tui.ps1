@@ -16,6 +16,27 @@ function Write-Step {
     Write-Host "[ytdlp-tui] $Message"
 }
 
+function Assert-SafeAppDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Refusing to use an empty install path."
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($resolved)
+    if ($resolved -eq $root) {
+        throw "Refusing to use a filesystem root as the install path: $resolved"
+    }
+
+    $leaf = Split-Path -Path $resolved -Leaf
+    if ($leaf -ne $AppName) {
+        throw "Refusing to use an unexpected install path. Expected the final folder name to be '$AppName': $resolved"
+    }
+}
+
 function Load-Metadata {
     if (-not (Test-Path $MetadataPath)) {
         throw "Installation metadata was not found. Install the app first."
@@ -55,6 +76,7 @@ function Copy-AppBundle {
     )
 
     if (Test-Path $DestinationDir) {
+        Assert-SafeAppDirectory -Path $DestinationDir
         Remove-Item $DestinationDir -Recurse -Force
     }
     New-Item -ItemType Directory -Path $DestinationDir -Force | Out-Null
@@ -65,6 +87,7 @@ $metadata = Load-Metadata
 $installDir = $metadata.install_dir
 $currentVersion = $metadata.version
 $UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
+Assert-SafeAppDirectory -Path $installDir
 
 Write-Host ""
 Write-Host "Installed version: $currentVersion"
