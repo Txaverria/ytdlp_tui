@@ -35,7 +35,7 @@ class YtDlpTuiApp(App[None]):
 
     .hero {
         text-style: bold;
-        margin: 0 0 1 0;
+        margin: 0 0 0 0;
     }
 
     #main_panel, #settings_panel {

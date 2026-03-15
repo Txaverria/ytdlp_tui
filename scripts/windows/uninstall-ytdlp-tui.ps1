@@ -20,6 +20,7 @@ function Load-Metadata {
 $metadata = Load-Metadata
 $installDir = $metadata.install_dir
 $startMenuDir = $metadata.start_menu_dir
+$updateScriptInAppDir = if ($metadata.PSObject.Properties.Name -contains "update_script_app_dir") { $metadata.update_script_app_dir } else { Join-Path $installDir "update-ytdlp-tui.ps1" }
 
 Write-Host ""
 Write-Host "This will remove:"
@@ -50,6 +51,15 @@ if (Test-Path $MetadataPath) {
 $installedUninstaller = Join-Path $InstallerStateDir "uninstall-ytdlp-tui.ps1"
 if (Test-Path $installedUninstaller) {
     Remove-Item $installedUninstaller -Force
+}
+
+$installedUpdater = Join-Path $InstallerStateDir "update-ytdlp-tui.ps1"
+if (Test-Path $installedUpdater) {
+    Remove-Item $installedUpdater -Force
+}
+
+if (Test-Path $updateScriptInAppDir) {
+    Remove-Item $updateScriptInAppDir -Force
 }
 
 if ((Test-Path $InstallerStateDir) -and -not (Get-ChildItem $InstallerStateDir -Force | Select-Object -First 1)) {

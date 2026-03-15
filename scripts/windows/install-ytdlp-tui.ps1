@@ -9,6 +9,7 @@ $AssetName = "ytdlp-tui-windows-amd64.zip"
 $InstallerStateDir = Join-Path $env:LOCALAPPDATA "ytdlp-tui-installer"
 $MetadataPath = Join-Path $InstallerStateDir "install.json"
 $UninstallScriptInstalled = Join-Path $InstallerStateDir "uninstall-ytdlp-tui.ps1"
+$UpdateScriptInstalled = Join-Path $InstallerStateDir "update-ytdlp-tui.ps1"
 
 function Write-Step {
     param([string]$Message)
@@ -141,6 +142,7 @@ $zipPath = Join-Path $tempRoot $AssetName
 $extractDir = Join-Path $tempRoot "extract"
 $startMenuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\$AppName"
 $appShortcut = Join-Path $startMenuDir "$AppName.lnk"
+$updateShortcut = Join-Path $startMenuDir "Update $AppName.lnk"
 $uninstallShortcut = Join-Path $startMenuDir "Uninstall $AppName.lnk"
 
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
@@ -166,12 +168,18 @@ try {
     Write-Step "Installing to $installDir"
     Copy-AppBundle -SourceDir $sourceDir -DestinationDir $installDir
 
+    $UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
+
     $uninstallScriptUrl = Get-UninstallScriptUrl -Version $asset.Version
     Write-Step "Downloading uninstall script..."
     Invoke-WebRequest -Uri $uninstallScriptUrl -OutFile $UninstallScriptInstalled
+    Write-Step "Downloading update script..."
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$($asset.Version)/scripts/windows/update-ytdlp-tui.ps1" -OutFile $UpdateScriptInstalled
+    Copy-Item $UpdateScriptInstalled $UpdateScriptInAppDir -Force
 
     New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
     New-Shortcut -ShortcutPath $appShortcut -TargetPath (Join-Path $installDir "$AppName.exe") -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
+    New-Shortcut -ShortcutPath $updateShortcut -TargetPath "powershell.exe" -Arguments "-ExecutionPolicy Bypass -File `"$UpdateScriptInAppDir`"" -WorkingDirectory $installDir -IconLocation (Join-Path $installDir "$AppName.exe")
     New-Shortcut -ShortcutPath $uninstallShortcut -TargetPath "powershell.exe" -Arguments "-ExecutionPolicy Bypass -File `"$UninstallScriptInstalled`"" -WorkingDirectory $InstallerStateDir -IconLocation (Join-Path $installDir "$AppName.exe")
 
     $metadata = [PSCustomObject]@{
@@ -180,8 +188,11 @@ try {
         install_dir = $installDir
         start_menu_dir = $startMenuDir
         app_shortcut = $appShortcut
+        update_shortcut = $updateShortcut
         uninstall_shortcut = $uninstallShortcut
         uninstall_script = $UninstallScriptInstalled
+        update_script = $UpdateScriptInstalled
+        update_script_app_dir = $UpdateScriptInAppDir
     }
     $metadata | ConvertTo-Json | Set-Content -Path $MetadataPath -Encoding UTF8
 

@@ -41,6 +41,16 @@ The installer downloads the latest Windows release, installs the app, and create
 
 The installer shows the final destination and requires confirmation before replacing an existing app folder.
 
+To update on Windows:
+
+- use the `Update ytdlp-tui` shortcut from the Start Menu, or
+- run `update-ytdlp-tui.ps1` from the installed app folder, or
+- run the installed updater directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\ytdlp-tui-installer\update-ytdlp-tui.ps1"
+```
+
 To uninstall on Windows:
 
 - use the `Uninstall ytdlp-tui` shortcut from the Start Menu, or
