@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import shutil
+import stat
 import subprocess
+import tempfile
+import urllib.request
 from pathlib import Path
 
 from ytdlp_tui.core.models import DependencyStatus
 from ytdlp_tui.core.paths import managed_bin_dir
 from ytdlp_tui.core.platform import current_platform
+
+
+YTDLP_RELEASE_BASE = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
 
 
 def managed_ytdlp_path() -> Path:
@@ -99,6 +105,28 @@ def detect_ffmpeg() -> DependencyStatus:
     )
 
 
+def install_managed_ytdlp() -> DependencyStatus:
+    destination = managed_ytdlp_path()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    asset_name = _ytdlp_asset_name()
+    url = f"{YTDLP_RELEASE_BASE}/{asset_name}"
+
+    with tempfile.NamedTemporaryFile(prefix="ytdlp-tui-", suffix=destination.suffix, delete=False) as tmp:
+        temp_path = Path(tmp.name)
+
+    try:
+        with urllib.request.urlopen(url) as response, temp_path.open("wb") as output:
+            shutil.copyfileobj(response, output)
+
+        _make_executable(temp_path)
+        temp_path.replace(destination)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+    return detect_ytdlp()
+
+
 def _read_version(command: list[str]) -> str | None:
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -125,3 +153,19 @@ def _missing_message(name: str) -> str:
     if system == "windows":
         return f"{name} is not installed yet. Windows will use a managed download flow."
     return f"{name} was not found on this system. Install it or use managed downloads later."
+
+
+def _ytdlp_asset_name() -> str:
+    system = current_platform()
+    if system == "windows":
+        return "yt-dlp.exe"
+    if system == "macos":
+        return "yt-dlp_macos"
+    return "yt-dlp"
+
+
+def _make_executable(path: Path) -> None:
+    if current_platform() == "windows":
+        return
+    mode = path.stat().st_mode
+    path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

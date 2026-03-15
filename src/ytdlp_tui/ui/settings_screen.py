@@ -1,10 +1,12 @@
 from pathlib import Path
 
+from textual import work
 from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Static
 
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
+from ytdlp_tui.core.dependencies import install_managed_ytdlp
 from ytdlp_tui.core.platform import dependency_policy_for_current_platform, open_in_file_manager
 
 
@@ -29,6 +31,7 @@ class SettingsScreen(Screen[None]):
             ),
             Button("Save", id="save_settings_button", variant="primary"),
             Button("Open Download Folder", id="open_download_dir_button"),
+            Button("Install or Update yt-dlp", id="install_ytdlp_button"),
             Static(f"yt-dlp policy: {policy.ytdlp}", id="ytdlp_policy"),
             Static(f"ffmpeg policy: {policy.ffmpeg}", id="ffmpeg_policy"),
             Static(self._dependency_detail(app.ytdlp_status), id="ytdlp_detail", classes="note"),
@@ -46,6 +49,8 @@ class SettingsScreen(Screen[None]):
             self._save_settings()
         elif event.button.id == "open_download_dir_button":
             self._open_download_dir()
+        elif event.button.id == "install_ytdlp_button":
+            self._install_ytdlp()
 
     def _save_settings(self) -> None:
         app = self.app
@@ -72,6 +77,22 @@ class SettingsScreen(Screen[None]):
             self.notify("Opened download folder in the system file manager.")
         except Exception as exc:
             self.notify(f"Could not open folder: {exc}", severity="error")
+
+    @work(thread=True)
+    def _install_ytdlp(self) -> None:
+        self.call_from_thread(self.notify, "Installing or updating managed yt-dlp...")
+        try:
+            status = install_managed_ytdlp()
+        except Exception as exc:
+            self.call_from_thread(self.notify, f"yt-dlp install failed: {exc}", severity="error")
+            return
+
+        self.call_from_thread(self._apply_ytdlp_status, status)
+
+    def _apply_ytdlp_status(self, status) -> None:
+        self.app.ytdlp_status = status
+        self.query_one("#ytdlp_detail", Static).update(self._dependency_detail(status))
+        self.notify("Managed yt-dlp is ready.")
 
     @staticmethod
     def _dependency_detail(status) -> str:
