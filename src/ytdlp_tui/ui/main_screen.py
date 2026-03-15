@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 class MainScreen(Screen[None]):
     BINDINGS = [("s", "settings", "Settings"), ("ctrl+q", "quit_app", "Quit")]
     PROGRESS_RE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
+    DEPENDENCY_PROGRESS_RE = re.compile(r"(\d+)%$")
     PHASE_MESSAGES = {
         "[FixupM4a]": "Fixing audio container...",
         "[ExtractAudio]": "Converting audio...",
@@ -229,6 +230,7 @@ class MainScreen(Screen[None]):
             need_ffmpeg = request.output_format in {"mp3", "m4a", "ogg", "mp4", "webm"} and not detect_ffmpeg().available
             if need_ytdlp or need_ffmpeg:
                 self.dependency_install_in_progress = True
+                self.query_one("#download_progress", ProgressBar).update(total=100, progress=0)
                 self._set_status_text("Installing missing dependencies. Try again after installation.", "warning")
                 self.notify("Installing missing dependencies. Try again after installation.", severity="warning")
                 self._update_action_visibility()
@@ -283,11 +285,11 @@ class MainScreen(Screen[None]):
     def _install_missing_dependencies(self, need_ytdlp: bool, need_ffmpeg: bool) -> None:
         try:
             if need_ytdlp:
-                self.app.call_from_thread(self._set_status_text, "Installing managed yt-dlp...", "warning")
-                install_managed_ytdlp()
+                self.app.call_from_thread(self._set_dependency_install_status, "Installing managed yt-dlp...")
+                install_managed_ytdlp(lambda message: self.app.call_from_thread(self._set_dependency_install_status, message))
             if need_ffmpeg:
-                self.app.call_from_thread(self._set_status_text, "Installing managed ffmpeg...", "warning")
-                install_managed_ffmpeg()
+                self.app.call_from_thread(self._set_dependency_install_status, "Installing managed ffmpeg...")
+                install_managed_ffmpeg(lambda message: self.app.call_from_thread(self._set_dependency_install_status, message))
         except Exception as exc:
             self.app.call_from_thread(self._finish_dependency_install, False, str(exc))
             return
@@ -373,7 +375,7 @@ class MainScreen(Screen[None]):
         self.query_one("#clear_input_button", Button).disabled = self.download_in_progress or self.dependency_install_in_progress
         self.query_one("#copy_log_button", Button).display = bool(self.log_lines)
         has_log = self.download_in_progress or bool(self.log_lines)
-        self.query_one("#download_progress", ProgressBar).display = self.download_in_progress and not self.postprocess_active
+        self.query_one("#download_progress", ProgressBar).display = self.dependency_install_in_progress or (self.download_in_progress and not self.postprocess_active)
         self.query_one("#status_loading", LoadingIndicator).display = self.postprocess_active
         self.query_one("#log_widget", Log).display = has_log
 
@@ -453,6 +455,17 @@ class MainScreen(Screen[None]):
             self._set_status_text(f"Dependency install failed: {error}", "error")
             self.notify(f"Dependency install failed: {error}", severity="error")
 
+    def _set_dependency_install_status(self, message: str) -> None:
+        self._set_status_text(message, "warning")
+        progress = self._extract_dependency_progress(message)
+        progress_bar = self.query_one("#download_progress", ProgressBar)
+        if progress is not None:
+            progress_bar.update(progress=progress)
+        elif any(keyword in message for keyword in ("Installing", "Extracting")):
+            progress_bar.update(progress=100)
+        else:
+            progress_bar.update(progress=0)
+
     @classmethod
     def _extract_progress(cls, line: str) -> float | None:
         match = cls.PROGRESS_RE.search(line)
@@ -466,3 +479,10 @@ class MainScreen(Screen[None]):
             if line.startswith(prefix):
                 return message
         return None
+
+    @classmethod
+    def _extract_dependency_progress(cls, message: str) -> float | None:
+        match = cls.DEPENDENCY_PROGRESS_RE.search(message)
+        if not match:
+            return None
+        return float(match.group(1))

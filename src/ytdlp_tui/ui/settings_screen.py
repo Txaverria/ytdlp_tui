@@ -1,7 +1,8 @@
 from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.widgets import Button, Footer, Header, Input, ProgressBar, Static
+import re
 
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
 from ytdlp_tui.core.dependencies import install_managed_ffmpeg, install_managed_ytdlp
@@ -10,6 +11,7 @@ from ytdlp_tui.core.platform import current_platform, dependency_policy_for_curr
 
 class SettingsScreen(Screen[None]):
     BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "quit_app", "Quit")]
+    PROGRESS_RE = re.compile(r"(\d+)%$")
 
     def compose(self):
         app = self.app
@@ -42,11 +44,13 @@ class SettingsScreen(Screen[None]):
             Static(self._dependency_detail(app.ytdlp_status), id="ytdlp_detail", classes="note"),
             Static("", classes="spacer"),
             Button("Install or Update yt-dlp", id="install_ytdlp_button"),
+            ProgressBar(total=100, show_eta=False, show_percentage=False, id="ytdlp_progress"),
             Static("", classes="spacer"),
             Static(f"ffmpeg policy: {policy.ffmpeg}", id="ffmpeg_policy", classes="note"),
             Static(self._dependency_detail(app.ffmpeg_status), id="ffmpeg_detail", classes="note"),
             Static("", classes="spacer"),
             Button("Install or Update ffmpeg", id="install_ffmpeg_button"),
+            ProgressBar(total=100, show_eta=False, show_percentage=False, id="ffmpeg_progress"),
             Static("", classes="spacer"),
             Static("YouTube Runtime", classes="title"),
             Static(self._deno_detail(app.deno_status), id="deno_detail", classes="note"),
@@ -115,6 +119,7 @@ class SettingsScreen(Screen[None]):
 
     def _apply_ytdlp_status(self, status) -> None:
         self.app.ytdlp_status = status
+        self.query_one("#ytdlp_progress", ProgressBar).display = False
         self.query_one("#ytdlp_detail", Static).update(self._dependency_detail(status))
         self.notify("Managed yt-dlp is ready.")
 
@@ -132,11 +137,22 @@ class SettingsScreen(Screen[None]):
 
     def _apply_ffmpeg_status(self, status) -> None:
         self.app.ffmpeg_status = status
+        self.query_one("#ffmpeg_progress", ProgressBar).display = False
         self.query_one("#ffmpeg_detail", Static).update(self._dependency_detail(status))
         self.notify("Managed ffmpeg is ready.")
 
     def _set_dependency_progress(self, selector: str, message: str) -> None:
         self.query_one(selector, Static).update(message)
+        progress_id = "#ytdlp_progress" if selector == "#ytdlp_detail" else "#ffmpeg_progress"
+        progress = self.query_one(progress_id, ProgressBar)
+        progress.display = True
+        parsed = self._extract_percent(message)
+        if parsed is not None:
+            progress.update(progress=parsed)
+        elif any(keyword in message for keyword in ("Installing", "Extracting")):
+            progress.update(progress=100)
+        else:
+            progress.update(progress=0)
 
     @staticmethod
     def _dependency_detail(status) -> str:
@@ -163,3 +179,10 @@ class SettingsScreen(Screen[None]):
             version = status.version.splitlines()[0] if status.version else "found"
             return f"Deno: found ({version})"
         return "Deno: not found"
+
+    @classmethod
+    def _extract_percent(cls, message: str) -> float | None:
+        match = cls.PROGRESS_RE.search(message)
+        if not match:
+            return None
+        return float(match.group(1))

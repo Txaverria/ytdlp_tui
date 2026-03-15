@@ -153,7 +153,7 @@ def install_managed_ytdlp(progress_callback: Callable[[str], None] | None = None
 
         _notify(progress_callback, "Installing yt-dlp...")
         _make_executable(temp_path)
-        temp_path.replace(destination)
+        shutil.move(str(temp_path), str(destination))
     finally:
         temp_path.unlink(missing_ok=True)
 

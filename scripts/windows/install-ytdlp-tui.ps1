@@ -150,6 +150,10 @@ try {
     Write-Host "Installed to: $installDir"
     Write-Host "Start Menu shortcut: $appShortcut"
     Write-Host "Uninstall script: $UninstallScriptInstalled"
+    Write-Host ""
+    Write-Host "Note: some YouTube downloads may require Deno."
+    Write-Host "Windows PowerShell install command:"
+    Write-Host "  irm https://deno.land/install.ps1 | iex"
 } finally {
     if (Test-Path $tempRoot) {
         Remove-Item $tempRoot -Recurse -Force
