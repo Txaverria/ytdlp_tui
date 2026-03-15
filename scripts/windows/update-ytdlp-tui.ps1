@@ -83,43 +83,44 @@ function Copy-AppBundle {
     Copy-Item (Join-Path $SourceDir "*") $DestinationDir -Recurse -Force
 }
 
-$metadata = Load-Metadata
-$installDir = $metadata.install_dir
-$currentVersion = $metadata.version
-$UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
-Assert-SafeAppDirectory -Path $installDir
-
-Write-Host ""
-Write-Host "Installed version: $currentVersion"
-
-$asset = Get-LatestReleaseAsset
-Write-Host "Latest version:    $($asset.Version)"
-Write-Host ""
-
-if ($asset.Version -eq $currentVersion) {
-    Write-Step "The app is already up to date."
-    exit 0
-}
-
-Write-Host "The app will be updated in:"
-Write-Host "  $installDir"
-Write-Host ""
-Write-Host "Type UPDATE to continue or CANCEL to stop"
-$choice = Read-Host "> "
-if ($choice -ne "UPDATE") {
-    Write-Step "Update cancelled."
-    exit 0
-}
-
-$tempRoot = Join-Path $env:TEMP "$AppName-update-$([guid]::NewGuid().ToString('N'))"
-$zipPath = Join-Path $tempRoot $AssetName
-$extractDir = Join-Path $tempRoot "extract"
-
-New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
-New-Item -ItemType Directory -Path $InstallerStateDir -Force | Out-Null
-
+$tempRoot = $null
 try {
+    $metadata = Load-Metadata
+    $installDir = $metadata.install_dir
+    $currentVersion = $metadata.version
+    $UpdateScriptInAppDir = Join-Path $installDir "update-ytdlp-tui.ps1"
+    Assert-SafeAppDirectory -Path $installDir
+
+    Write-Host ""
+    Write-Host "Installed version: $currentVersion"
+
+    $asset = Get-LatestReleaseAsset
+    Write-Host "Latest version:    $($asset.Version)"
+    Write-Host ""
+
+    if ($asset.Version -eq $currentVersion) {
+        Write-Step "The app is already up to date."
+        return
+    }
+
+    Write-Host "The app will be updated in:"
+    Write-Host "  $installDir"
+    Write-Host ""
+    Write-Host "Type UPDATE to continue or CANCEL to stop"
+    $choice = Read-Host "> "
+    if ($choice -ne "UPDATE") {
+        Write-Step "Update cancelled."
+        return
+    }
+
+    $tempRoot = Join-Path $env:TEMP "$AppName-update-$([guid]::NewGuid().ToString('N'))"
+    $zipPath = Join-Path $tempRoot $AssetName
+    $extractDir = Join-Path $tempRoot "extract"
+
+    New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $InstallerStateDir -Force | Out-Null
+
     Write-Step "Downloading $($asset.Version)..."
     Invoke-WebRequest -Uri $asset.Url -OutFile $zipPath
 
@@ -147,8 +148,13 @@ try {
     $metadata | ConvertTo-Json | Set-Content -Path $MetadataPath -Encoding UTF8
 
     Write-Step "Update complete."
+} catch {
+    Write-Host ""
+    Write-Host "Update failed: $($_.Exception.Message)" -ForegroundColor Red
 } finally {
-    if (Test-Path $tempRoot) {
+    if ($tempRoot -and (Test-Path $tempRoot)) {
         Remove-Item $tempRoot -Recurse -Force
     }
+    Write-Host ""
+    Read-Host "Press Enter to close"
 }

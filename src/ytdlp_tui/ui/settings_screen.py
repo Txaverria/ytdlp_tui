@@ -1,7 +1,7 @@
+import webbrowser
 from pathlib import Path
 
 import re
-from textual import work
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, ProgressBar, Static
@@ -9,11 +9,13 @@ from textual.widgets import Button, Footer, Header, Input, ProgressBar, Static
 from ytdlp_tui.core.config import AppConfig, get_default_downloads_dir
 from ytdlp_tui.core.dependencies import install_managed_ffmpeg, install_managed_ytdlp
 from ytdlp_tui.core.platform import current_platform, dependency_policy_for_current_platform
+from ytdlp_tui.core.releases import LATEST_RELEASE_PAGE
 
 
 class SettingsScreen(Screen[None]):
     BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "quit_app", "Quit")]
     PROGRESS_RE = re.compile(r"(\d+)%$")
+    release_url: str = LATEST_RELEASE_PAGE
 
     def compose(self):
         app = self.app
@@ -57,6 +59,8 @@ class SettingsScreen(Screen[None]):
             Static(self._deno_detail(app.deno_status), id="deno_detail", classes="note"),
             Static("Some YouTube downloads may require Deno.", classes="note"),
             Static("", classes="spacer"),
+            Button("Open Latest Release", id="open_latest_release_button"),
+            Static("", classes="spacer"),
             Static(
                 self._platform_dependency_note(),
                 classes="note",
@@ -74,6 +78,8 @@ class SettingsScreen(Screen[None]):
             self._install_ytdlp()
         elif event.button.id == "install_ffmpeg_button":
             self._install_ffmpeg()
+        elif event.button.id == "open_latest_release_button":
+            webbrowser.open(self.release_url)
 
     def action_back(self) -> None:
         self.app.pop_screen()

@@ -1,14 +1,17 @@
+from textual import work
 from textual.app import App
 
 from ytdlp_tui.core.config import AppConfig, load_config, save_config
 from ytdlp_tui.core.dependencies import detect_deno, detect_ffmpeg, detect_ytdlp
 from ytdlp_tui.core.models import DependencyStatus
+from ytdlp_tui.core.releases import ReleaseInfo, fetch_latest_release_info, get_current_version
 
 from ytdlp_tui.ui.main_screen import MainScreen
 
 
 class YtDlpTuiApp(App[None]):
     TITLE = "ytdlp-tui"
+    SUB_TITLE = f"v{get_current_version()} | checking updates..."
     CSS = """
     Screen {
         layout: vertical;
@@ -220,13 +223,16 @@ class YtDlpTuiApp(App[None]):
         if self.config.theme:
             self.theme = self.config.theme
         self.refresh_dependency_statuses()
+        self.release_info = ReleaseInfo(current_version=get_current_version())
         self.theme_changed_signal.subscribe(self, self._refresh_theme_dependent_widgets)
+        self._check_latest_release()
         self.push_screen(MainScreen())
 
     config: AppConfig
     ytdlp_status: DependencyStatus
     ffmpeg_status: DependencyStatus
     deno_status: DependencyStatus
+    release_info: ReleaseInfo
 
     def update_config(self, config: AppConfig) -> None:
         self.config = config
@@ -236,6 +242,24 @@ class YtDlpTuiApp(App[None]):
         self.ytdlp_status = detect_ytdlp()
         self.ffmpeg_status = detect_ffmpeg()
         self.deno_status = detect_deno()
+
+    @work(thread=True)
+    def _check_latest_release(self) -> None:
+        info = fetch_latest_release_info()
+        self.call_from_thread(self._apply_release_info, info)
+
+    def _apply_release_info(self, info: ReleaseInfo) -> None:
+        self.release_info = info
+        if info.error:
+            self.sub_title = f"v{info.current_version} | update check unavailable"
+            return
+        if info.latest_version and info.update_available:
+            self.sub_title = f"v{info.current_version} | update available: v{info.latest_version}"
+            return
+        if info.latest_version:
+            self.sub_title = f"v{info.current_version} | up to date"
+            return
+        self.sub_title = f"v{info.current_version} | update check unavailable"
 
     def _refresh_theme_dependent_widgets(self, _theme) -> None:
         if self.config.theme != self.theme:
