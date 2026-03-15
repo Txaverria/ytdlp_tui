@@ -67,9 +67,9 @@ def run_download(
             process.terminate()
             break
 
-    process.wait()
-
-    if cancelled and process.poll() is None:
+    try:
+        process.wait(timeout=3 if cancelled else None)
+    except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
 
