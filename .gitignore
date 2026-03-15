@@ -6,8 +6,10 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv-win/
 venv/
 build/
 dist/
+bin/
 *.egg-info/
 src/*.exe

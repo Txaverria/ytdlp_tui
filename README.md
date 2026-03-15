@@ -14,12 +14,30 @@ Cross-platform terminal UI for `yt-dlp`, built with Python and Textual.
 
 ## Table of Contents
 
+- [Quick Install](#quick-install)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Build a Release](#build-a-release)
 - [License](#license)
+
+## Quick Install
+
+Prebuilt releases are available on the [GitHub Releases](https://github.com/Txaverria/ytdlp-tui/releases) page.
+
+On Windows PowerShell, you can run the installer script directly:
+
+```powershell
+irm https://raw.githubusercontent.com/Txaverria/ytdlp-tui/main/scripts/windows/install-ytdlp-tui.ps1 | iex
+```
+
+The installer downloads the latest Windows release, installs the app, and creates Start Menu shortcuts. It can install to:
+
+- `Local AppData` (recommended)
+- `Program Files`
+- a custom folder
+- the current folder
 
 ## Features
 
@@ -46,6 +64,8 @@ Prerequisites:
 - On Linux/macOS, `yt-dlp` and `ffmpeg` are recommended on `PATH`
 - On Windows, the app can install managed `yt-dlp` and `ffmpeg` for you
 - For some YouTube downloads, `Deno` may also be required
+
+If you only want the packaged Windows app, use the installer above or download the latest release instead of running from source.
 
 Clone and run locally:
 
