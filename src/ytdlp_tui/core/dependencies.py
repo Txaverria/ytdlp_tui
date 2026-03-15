@@ -5,6 +5,7 @@ import stat
 import subprocess
 import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from ytdlp_tui.core.models import DependencyStatus
@@ -13,6 +14,7 @@ from ytdlp_tui.core.platform import current_platform
 
 
 YTDLP_RELEASE_BASE = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
+WINDOWS_FFMPEG_ZIP_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
 
 def managed_ytdlp_path() -> Path:
@@ -127,6 +129,38 @@ def install_managed_ytdlp() -> DependencyStatus:
     return detect_ytdlp()
 
 
+def install_managed_ffmpeg() -> DependencyStatus:
+    system = current_platform()
+    if system != "windows":
+        raise RuntimeError("Managed ffmpeg install is currently implemented for Windows only.")
+
+    destination_dir = managed_bin_dir()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(prefix="ytdlp-tui-ffmpeg-", suffix=".zip", delete=False) as tmp:
+        archive_path = Path(tmp.name)
+
+    extract_dir = archive_path.with_suffix("")
+
+    try:
+        with urllib.request.urlopen(WINDOWS_FFMPEG_ZIP_URL) as response, archive_path.open("wb") as output:
+            shutil.copyfileobj(response, output)
+
+        with zipfile.ZipFile(archive_path) as archive:
+            archive.extractall(extract_dir)
+
+        bin_dir = _find_ffmpeg_bin_dir(extract_dir)
+        for tool_name in ("ffmpeg.exe", "ffprobe.exe", "ffplay.exe"):
+            source = bin_dir / tool_name
+            if source.exists():
+                shutil.copy2(source, destination_dir / tool_name)
+    finally:
+        archive_path.unlink(missing_ok=True)
+        shutil.rmtree(extract_dir, ignore_errors=True)
+
+    return detect_ffmpeg()
+
+
 def _read_version(command: list[str]) -> str | None:
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -169,3 +203,10 @@ def _make_executable(path: Path) -> None:
         return
     mode = path.stat().st_mode
     path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
+def _find_ffmpeg_bin_dir(root: Path) -> Path:
+    for candidate in root.rglob("bin"):
+        if (candidate / "ffmpeg.exe").exists():
+            return candidate
+    raise RuntimeError("Could not find ffmpeg binaries in the downloaded archive.")
