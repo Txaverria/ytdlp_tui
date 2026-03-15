@@ -73,6 +73,12 @@ python -m ytdlp_tui
 
 Some YouTube downloads may require [`Deno`](https://deno.com/) for JavaScript runtime support. If YouTube still blocks a request after Deno is installed, browser cookies may also be required.
 
+On Windows PowerShell, Deno can be installed with:
+
+```powershell
+irm https://deno.land/install.ps1 | iex
+```
+
 ## Usage
 
 Download a single item:
